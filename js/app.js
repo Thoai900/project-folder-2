@@ -539,6 +539,39 @@ function togglePasswordVisibility() {
     }
 }
 
+function updateUserTypeDisplay() {
+    const options = document.querySelectorAll('.user-type-option');
+    const selectedValue = document.querySelector('input[name="userType"]:checked')?.value;
+    
+    options.forEach(option => {
+        const box = option.querySelector('.user-type-box');
+        const isSelected = option.dataset.type === selectedValue;
+        
+        if (isSelected) {
+            // Chọn
+            box.classList.add('border-indigo-500', 'bg-indigo-500/10', 'shadow-lg', 'shadow-indigo-500/20');
+            box.classList.remove('border-slate-300', 'border-indigo-200', 'hover:bg-indigo-500/5');
+            
+            // Highlight icon
+            const icon = box.querySelector('[data-lucide]');
+            if (icon) {
+                if (selectedValue === 'student') {
+                    icon.classList.remove('text-purple-500');
+                    icon.classList.add('text-blue-500');
+                } else {
+                    icon.classList.remove('text-blue-500');
+                    icon.classList.add('text-purple-500');
+                }
+            }
+        } else {
+            // Không chọn
+            box.classList.remove('border-indigo-500', 'bg-indigo-500/10', 'shadow-lg', 'shadow-indigo-500/20');
+            box.classList.add('border-slate-300');
+            box.classList.add('hover:bg-indigo-500/5');
+        }
+    });
+}
+
 function handleLogout() {
     state.currentUser = null;
     localStorage.removeItem('pm_currentUser');
@@ -566,6 +599,8 @@ window.toggleAuthMode = function() {
         nameField.querySelector('input').setAttribute('required', 'true');
         switchText.innerText = "Đã có tài khoản?";
         switchBtn.innerText = "Đăng nhập";
+        // Update display khi hiển thị user-type-field
+        setTimeout(() => updateUserTypeDisplay(), 100);
     } else {
         title.innerText = "Đăng nhập";
         btn.innerText = "Đăng nhập ngay";
@@ -2503,18 +2538,18 @@ function renderLoginModal(container) {
 
                     <div id="user-type-field" class="hidden space-y-3">
                         <label class="block text-sm font-medium ${styles.textSecondary} mb-3">Bạn là:</label>
-                        <div class="grid grid-cols-2 gap-3">
-                            <label class="relative cursor-pointer">
-                                <input type="radio" name="userType" value="student" checked class="absolute opacity-0 w-full h-full cursor-pointer">
-                                <div class="p-4 rounded-xl border-2 ${styles.border} hover:border-indigo-500 transition-all has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-500/10 text-center">
-                                    <i data-lucide="book-open" size="24" class="mx-auto mb-2 ${styles.textPrimary}"></i>
+                        <div class="grid grid-cols-2 gap-3" id="user-type-options">
+                            <label class="relative cursor-pointer user-type-option" data-type="student">
+                                <input type="radio" name="userType" value="student" checked class="absolute opacity-0 w-full h-full cursor-pointer" onchange="updateUserTypeDisplay()">
+                                <div class="user-type-box p-4 rounded-xl border-2 border-indigo-200 hover:border-indigo-500 transition-all text-center bg-indigo-500/10">
+                                    <i data-lucide="book-open" size="24" class="mx-auto mb-2 text-blue-500"></i>
                                     <p class="font-bold text-sm ${styles.textPrimary}">Học sinh</p>
                                 </div>
                             </label>
-                            <label class="relative cursor-pointer">
-                                <input type="radio" name="userType" value="teacher" class="absolute opacity-0 w-full h-full cursor-pointer">
-                                <div class="p-4 rounded-xl border-2 ${styles.border} hover:border-indigo-500 transition-all has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-500/10 text-center">
-                                    <i data-lucide="graduation-cap" size="24" class="mx-auto mb-2 ${styles.textPrimary}"></i>
+                            <label class="relative cursor-pointer user-type-option" data-type="teacher">
+                                <input type="radio" name="userType" value="teacher" class="absolute opacity-0 w-full h-full cursor-pointer" onchange="updateUserTypeDisplay()">
+                                <div class="user-type-box p-4 rounded-xl border-2 border-slate-300 hover:border-indigo-500 transition-all text-center hover:bg-indigo-500/5">
+                                    <i data-lucide="graduation-cap" size="24" class="mx-auto mb-2 text-purple-500"></i>
                                     <p class="font-bold text-sm ${styles.textPrimary}">Giáo viên</p>
                                 </div>
                             </label>
