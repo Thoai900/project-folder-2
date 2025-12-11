@@ -12,10 +12,11 @@
     const TEXTAREA_SELECTORS = [
         'textarea[placeholder*="Message"]',  // ChatGPT
         'textarea[placeholder*="Send"]',     // Claude
-        'textarea[placeholder*="Enter"]',    // Gemini
+        'textarea[placeholder*="Enter"]',    // Gemini old
+        'div[contenteditable="true"]',       // Gemini (main), some Claude
         'textarea[contenteditable="true"]',  // Generic
         '#prompt-textarea',                  // Fallback
-        '[data-testid="textbox"]'           // Alternative
+        '[data-testid="textbox"]'            // Alternative
     ];
 
     let currentTextarea = null;
