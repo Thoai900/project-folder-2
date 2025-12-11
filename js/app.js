@@ -514,7 +514,7 @@ function handleRegister(e) {
     showToast(`Đăng ký thành công! Chào mừng ${userType === 'teacher' ? 'Thầy/Cô' : 'các bạn'} đến PromptMaster!`);
 }
 
-// --- Forgot Password (THỰC TẾ - gửi email) ---
+// --- Forgot Password - OTP Simple Flow ---
 function handleForgotPassword() {
     const emailInput = document.querySelector('#auth-form input[name="email"]');
     const email = emailInput?.value?.trim();
@@ -534,59 +534,54 @@ function handleForgotPassword() {
         return;
     }
     
-    // Tạo reset token và lưu
-    const resetToken = generateToken();
-    const resetData = {
+    // Tạo OTP 6 số
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpData = {
         email: email,
-        token: resetToken,
+        otp: otp,
         createdAt: Date.now(),
-        expiresIn: 3600000 // 1 giờ
+        expiresIn: 300000 // 5 phút
     };
     
-    // Lưu reset request vào localStorage
-    let resetRequests = JSON.parse(localStorage.getItem('pm_resetRequests') || '[]');
-    resetRequests = resetRequests.filter(r => r.email !== email); // Xóa request cũ
-    resetRequests.push(resetData);
-    localStorage.setItem('pm_resetRequests', JSON.stringify(resetRequests));
+    // Lưu OTP vào localStorage
+    let otpRequests = JSON.parse(localStorage.getItem('pm_otpRequests') || '[]');
+    otpRequests = otpRequests.filter(r => r.email !== email); // Xóa OTP cũ
+    otpRequests.push(otpData);
+    localStorage.setItem('pm_otpRequests', JSON.stringify(otpRequests));
     
-    // Gửi email
-    sendResetPasswordEmail(email, resetToken);
+    // Gửi OTP qua email
+    sendOTPEmail(email, otp);
+    
+    // Hiển thị form nhập OTP
+    showOTPForm(email);
 }
 
-function generateToken() {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-}
-
-// Gửi email bằng EmailJS (phải setup EmailJS ID trước)
-function sendResetPasswordEmail(email, token) {
-    const resetLink = `${window.location.origin}${window.location.pathname}?resetToken=${token}`;
-    
-    // Kiểm tra xem EmailJS đã setup chưa
+// Gửi OTP qua email
+function sendOTPEmail(email, otp) {
     if (typeof emailjs === 'undefined') {
-        // Nếu chưa setup EmailJS, hiển thị token để test
-        showResetPasswordModal(email, token, resetLink);
+        console.warn('EmailJS not loaded. OTP:', otp);
+        showToast(`⚠️ EmailJS chưa setup. Mã OTP của bạn: ${otp}`);
         return;
     }
     
-    // Gửi email qua EmailJS
     const templateParams = {
         to_email: email,
-        reset_link: resetLink,
-        token: token
+        otp_code: otp,
+        message: `Mã OTP của bạn là: ${otp}. Mã có hiệu lực trong 5 phút.`
     };
     
     emailjs.send('service_1nrvxhz', 'template_qrfjik7', templateParams)
         .then(response => {
-            showToast('✓ Email reset password đã được gửi! Kiểm tra inbox của bạn.');
+            showToast('✓ Mã OTP đã được gửi tới email của bạn!');
         })
         .catch(error => {
-            showToast('❌ Không thể gửi email. Thử lại sau.');
+            showToast('❌ Không thể gửi email. Vui lòng thử lại.');
             console.error('EmailJS Error:', error);
         });
 }
 
-// Modal hiển thị token (cho dev/test)
-function showResetPasswordModal(email, token, resetLink) {
+// Form nhập OTP
+function showOTPForm(email) {
     const styles = getStyles();
     const modalContent = document.getElementById('modal-body');
     
@@ -594,79 +589,31 @@ function showResetPasswordModal(email, token, resetLink) {
         <div class="p-8 space-y-6">
             <div class="text-center">
                 <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl ${getColorClass('softBg')} mb-4">
-                    <i data-lucide="mail" size="32" class="${getColorClass('text')}"></i>
+                    <i data-lucide="mail-check" size="32" class="${getColorClass('text')}"></i>
                 </div>
-                <h2 class="text-2xl font-black ${styles.textPrimary} mb-2">Reset Mật Khẩu</h2>
-                <p class="${styles.textSecondary}">Email: <span class="font-semibold">${email}</span></p>
+                <h2 class="text-2xl font-black ${styles.textPrimary} mb-2">Nhập Mã OTP</h2>
+                <p class="${styles.textSecondary} text-sm">Mã xác nhận đã được gửi tới</p>
+                <p class="${styles.textPrimary} font-semibold">${email}</p>
             </div>
             
-            <div class="rounded-lg ${styles.inputBg} border ${styles.border} p-4 space-y-3">
-                <p class="${styles.textSecondary} text-sm"><strong>Reset Token:</strong></p>
-                <div class="bg-black/30 border ${styles.border} rounded-lg p-3 font-mono text-xs break-all ${getColorClass('text')}">
-                    ${token}
+            <div class="space-y-4">
+                <div>
+                    <label class="${styles.textPrimary} font-semibold block mb-2">Mã OTP (6 số)</label>
+                    <input type="text" id="otp-input" maxlength="6" placeholder="000000" 
+                        class="w-full px-4 py-3 rounded-lg ${styles.inputBg} border ${styles.border} ${styles.textPrimary} placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center text-2xl font-mono tracking-widest">
+                    <p class="${styles.textSecondary} text-xs mt-2">Mã có hiệu lực trong 5 phút</p>
                 </div>
-                <button onclick="copyToClipboard('${token}')" class="w-full px-4 py-2 rounded-lg ${getColorClass('bg')} hover:opacity-90 text-white font-semibold text-sm">
-                    <i data-lucide="copy" size="16" class="inline mr-2"></i>
-                    Copy Token
-                </button>
-            </div>
-            
-            <div class="rounded-lg bg-blue-500/10 border border-blue-500/30 p-4">
-                <p class="font-semibold text-blue-600 mb-2">💡 Cách sử dụng:</p>
-                <ol class="text-sm text-blue-600/80 space-y-1 list-decimal list-inside">
-                    <li>Copy token ở trên</li>
-                    <li>Nếu đã setup EmailJS - email sẽ được gửi tự động</li>
-                    <li>Người nhận sẽ nhận được link reset trong email</li>
-                    <li>Click link để reset mật khẩu mới</li>
-                </ol>
-            </div>
-            
-            <div class="rounded-lg bg-amber-500/10 border border-amber-500/30 p-4">
-                <p class="font-semibold text-amber-600 mb-2">⚙️ EmailJS đã được cấu hình!</p>
-                <p class="text-sm text-amber-600/80">Hệ thống sẽ tự động gửi email reset password tới người dùng.</p>
-            </div>
-            
-            <div class="flex gap-3 pt-4 border-t ${styles.border}">
-                <button onclick="closeModal()" class="flex-1 py-3 rounded-xl border ${styles.border} ${styles.textPrimary} hover:bg-white/5 font-bold transition-all">
-                    Đóng
-                </button>
-                <button onclick="showResetPasswordForm('${email}', '${token}')" class="flex-1 py-3 rounded-xl ${getColorClass('bg')} hover:opacity-90 text-white font-bold transition-all">
-                    Reset Mật Khẩu Ngay
-                </button>
-            </div>
-        </div>
-    `;
-    
-    openModal();
-    lucide.createIcons();
-}
-
-// Form reset mật khẩu
-function showResetPasswordForm(email, token) {
-    const styles = getStyles();
-    const modalContent = document.getElementById('modal-body');
-    
-    modalContent.innerHTML = `
-        <div class="p-8 space-y-6">
-            <div class="text-center">
-                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl ${getColorClass('softBg')} mb-4">
-                    <i data-lucide="lock" size="32" class="${getColorClass('text')}"></i>
-                </div>
-                <h2 class="text-2xl font-black ${styles.textPrimary} mb-2">Đặt Mật Khẩu Mới</h2>
-                <p class="${styles.textSecondary}">Email: <span class="font-semibold">${email}</span></p>
-            </div>
-            
-            <div class="space-y-3">
+                
                 <div>
                     <label class="${styles.textPrimary} font-semibold block mb-2">Mật khẩu mới</label>
                     <input type="password" id="new-password" placeholder="Nhập mật khẩu mới" 
-                        class="w-full px-4 py-2 rounded-lg ${styles.inputBg} border ${styles.border} ${styles.textPrimary} placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        class="w-full px-4 py-3 rounded-lg ${styles.inputBg} border ${styles.border} ${styles.textPrimary} placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
                 
                 <div>
                     <label class="${styles.textPrimary} font-semibold block mb-2">Xác nhận mật khẩu</label>
-                    <input type="password" id="confirm-password" placeholder="Xác nhận mật khẩu mới" 
-                        class="w-full px-4 py-2 rounded-lg ${styles.inputBg} border ${styles.border} ${styles.textPrimary} placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="password" id="confirm-password" placeholder="Nhập lại mật khẩu mới" 
+                        class="w-full px-4 py-3 rounded-lg ${styles.inputBg} border ${styles.border} ${styles.textPrimary} placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
             </div>
             
@@ -674,8 +621,8 @@ function showResetPasswordForm(email, token) {
                 <button onclick="closeModal()" class="flex-1 py-3 rounded-xl border ${styles.border} ${styles.textPrimary} hover:bg-white/5 font-bold transition-all">
                     Hủy
                 </button>
-                <button onclick="confirmResetPassword('${email}', '${token}')" class="flex-1 py-3 rounded-xl ${getColorClass('bg')} hover:opacity-90 text-white font-bold transition-all">
-                    Đặt Lại Mật Khẩu
+                <button onclick="verifyOTPAndResetPassword('${email}')" class="flex-1 py-3 rounded-xl ${getColorClass('bg')} hover:opacity-90 text-white font-bold transition-all">
+                    Xác Nhận
                 </button>
             </div>
         </div>
@@ -683,15 +630,27 @@ function showResetPasswordForm(email, token) {
     
     openModal();
     lucide.createIcons();
+    
+    // Focus vào ô OTP
+    setTimeout(() => {
+        document.getElementById('otp-input')?.focus();
+    }, 100);
 }
 
-function confirmResetPassword(email, token) {
+function verifyOTPAndResetPassword(email) {
+    const otpInput = document.getElementById('otp-input').value.trim();
     const newPassword = document.getElementById('new-password').value.trim();
     const confirmPassword = document.getElementById('confirm-password').value.trim();
     
-    // Validate
+    // Validate OTP
+    if (!otpInput || otpInput.length !== 6) {
+        showToast('⚠️ Vui lòng nhập mã OTP 6 số!');
+        return;
+    }
+    
+    // Validate passwords
     if (!newPassword || !confirmPassword) {
-        showToast('⚠️ Vui lòng nhập cả 2 trường mật khẩu!');
+        showToast('⚠️ Vui lòng nhập mật khẩu mới!');
         return;
     }
     
@@ -705,17 +664,17 @@ function confirmResetPassword(email, token) {
         return;
     }
     
-    // Kiểm tra token có hợp lệ không
-    const resetRequests = JSON.parse(localStorage.getItem('pm_resetRequests') || '[]');
-    const resetReq = resetRequests.find(r => r.email === email && r.token === token);
+    // Kiểm tra OTP có hợp lệ không
+    const otpRequests = JSON.parse(localStorage.getItem('pm_otpRequests') || '[]');
+    const otpReq = otpRequests.find(r => r.email === email && r.otp === otpInput);
     
-    if (!resetReq) {
-        showToast('❌ Token không hợp lệ!');
+    if (!otpReq) {
+        showToast('❌ Mã OTP không đúng!');
         return;
     }
     
-    if (Date.now() - resetReq.createdAt > resetReq.expiresIn) {
-        showToast('❌ Token đã hết hạn (1 giờ)!');
+    if (Date.now() - otpReq.createdAt > otpReq.expiresIn) {
+        showToast('❌ Mã OTP đã hết hạn! Vui lòng thử lại.');
         return;
     }
     
@@ -727,20 +686,14 @@ function confirmResetPassword(email, token) {
         users[userIndex].password = newPassword;
         localStorage.setItem('pm_users', JSON.stringify(users));
         
-        // Xóa reset request
-        const updatedRequests = resetRequests.filter(r => r.email !== email);
-        localStorage.setItem('pm_resetRequests', JSON.stringify(updatedRequests));
+        // Xóa OTP request
+        const updatedRequests = otpRequests.filter(r => r.email !== email);
+        localStorage.setItem('pm_otpRequests', JSON.stringify(updatedRequests));
         
         closeModal();
         showToast('✓ Mật khẩu đã được đặt lại thành công!');
         renderApp();
     }
-}
-
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        showToast('✓ Đã copy token!');
-    });
 }
 
 // --- Toggle password visibility ---
