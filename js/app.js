@@ -41,6 +41,78 @@ function renderFriendsModal(container) {
     `;
     lucide.createIcons();
 }
+
+function renderMyPromptsModal(container) {
+    const styles = getStyles();
+    const user = state.currentUser;
+    if (!user) {
+        container.innerHTML = `<div class="p-8 text-center ${styles.textSecondary}">Vui lòng đăng nhập</div>`;
+        return;
+    }
+    
+    const customPrompts = user.customPrompts || [];
+    const isTeacher = user.userType === 'teacher';
+    
+    container.innerHTML = `
+        <div class="p-6 space-y-6">
+            <div class="text-center">
+                <div class="flex items-center justify-center gap-2 mb-3">
+                    <i data-lucide="${isTeacher ? 'graduation-cap' : 'book-open'}" class="${isTeacher ? 'text-purple-500' : 'text-blue-500'}" size="24"></i>
+                    <h3 class="text-2xl font-bold ${styles.textPrimary}">Các Prompt Của Bạn</h3>
+                </div>
+                <p class="${styles.textSecondary} text-sm">
+                    ${isTeacher 
+                        ? '🎓 Bạn là <span class="font-bold text-purple-500">Giáo viên</span> - Prompt sẽ hiển thị cho toàn bộ học sinh' 
+                        : '📚 Bạn là <span class="font-bold text-blue-500">Học sinh</span> - Chia sẻ prompt với bạn bè'}
+                </p>
+            </div>
+            
+            <button onclick="addPromptToSystem()" class="w-full py-3 rounded-xl ${getColorClass('bg')} hover:opacity-90 text-white font-bold transition-all flex items-center justify-center gap-2">
+                <i data-lucide="plus" size="18"></i> Thêm Prompt Mới
+            </button>
+            
+            <div class="max-h-[500px] overflow-y-auto space-y-3 custom-scrollbar pr-2">
+                ${customPrompts.length === 0 ? `
+                    <div class="text-center py-8 ${styles.textSecondary}">
+                        <i data-lucide="list" size="32" class="mx-auto opacity-30 mb-2"></i>
+                        <p>Chưa có prompt tùy chỉnh</p>
+                    </div>
+                ` : customPrompts.map(prompt => `
+                    <div class="p-4 rounded-lg ${styles.inputBg} border ${styles.border} space-y-3">
+                        <div>
+                            <p class="font-bold ${styles.textPrimary}">${prompt.title}</p>
+                            <p class="text-sm ${styles.textSecondary}">${prompt.description || 'Không có mô tả'}</p>
+                        </div>
+                        <p class="text-xs font-mono ${styles.textSecondary} line-clamp-2 bg-black/20 p-2 rounded">${prompt.content}</p>
+                        <div class="flex gap-2">
+                            ${!isTeacher && prompt.isTeacherFixed ? `
+                                <span class="flex-1 py-1 px-2 rounded text-xs text-center bg-orange-500/20 text-orange-500 border border-orange-500/30">
+                                    🔒 Prompt cố định
+                                </span>
+                            ` : `
+                                <button onclick="deletePrompt(${prompt.id})" class="flex-1 py-1.5 rounded-lg hover:bg-red-500/10 hover:border-red-500/30 text-red-400 text-xs font-bold transition-all border ${styles.border}">
+                                    <i data-lucide="trash-2" size="14" class="inline mr-1"></i> Xóa
+                                </button>
+                            `}
+                            ${!isTeacher && !prompt.isTeacherFixed ? `
+                                <button onclick="sharePrompt(${prompt.id})" class="flex-1 py-1.5 rounded-lg ${getColorClass('softBg')} ${getColorClass('softHover')} ${getColorClass('text')} text-xs font-bold transition-all">
+                                    <i data-lucide="share-2" size="14" class="inline mr-1"></i> Chia sẻ
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            
+            <div class="flex gap-3 pt-4 border-t ${styles.border}">
+                <button onclick="closeModal()" class="btn-core btn-glass flex-1 px-5 py-3 ${styles.textPrimary}">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    `;
+    lucide.createIcons();
+}
 // ==========================================
 // 1. STATE MANAGEMENT & INITIALIZATION
 // ==========================================
@@ -408,6 +480,7 @@ function handleRegister(e) {
     const name = e.target.name.value;
     const email = e.target.email.value;
     const password = e.target.password.value;
+    const userType = document.querySelector('input[name="userType"]:checked')?.value || 'student';
 
     if (state.users.some(u => u.email === email)) {
         showToast("Email này đã được sử dụng!");
@@ -419,6 +492,7 @@ function handleRegister(e) {
         name: name,
         email: email,
         password: password,
+        userType: userType, // 'teacher' hoặc 'student'
         favorites: [],
         customPrompts: [],
         createdAt: new Date().toISOString(),
@@ -437,7 +511,7 @@ function handleRegister(e) {
     
     closeModal();
     renderApp();
-    showToast("Đăng ký thành công!");
+    showToast(`Đăng ký thành công! Chào mừng ${userType === 'teacher' ? 'Thầy/Cô' : 'các bạn'} đến PromptMaster!`);
 }
 
 // --- Forgot Password (mock flow) ---
@@ -479,6 +553,7 @@ window.toggleAuthMode = function() {
     const btn = document.getElementById('auth-btn');
     const form = document.getElementById('auth-form');
     const nameField = document.getElementById('name-field');
+    const userTypeField = document.getElementById('user-type-field');
     const switchText = document.getElementById('auth-switch-text');
     const switchBtn = document.getElementById('auth-switch-btn');
 
@@ -487,6 +562,7 @@ window.toggleAuthMode = function() {
         btn.innerText = "Tạo tài khoản mới";
         form.onsubmit = handleRegister;
         nameField.classList.remove('hidden');
+        userTypeField.classList.remove('hidden');
         nameField.querySelector('input').setAttribute('required', 'true');
         switchText.innerText = "Đã có tài khoản?";
         switchBtn.innerText = "Đăng nhập";
@@ -495,10 +571,12 @@ window.toggleAuthMode = function() {
         btn.innerText = "Đăng nhập ngay";
         form.onsubmit = handleLogin;
         nameField.classList.add('hidden');
+        userTypeField.classList.add('hidden');
         nameField.querySelector('input').removeAttribute('required');
         switchText.innerText = "Chưa có tài khoản?";
         switchBtn.innerText = "Đăng ký";
     }
+    lucide.createIcons();
 };
 
 // --- Favorites ---
@@ -2330,7 +2408,13 @@ function renderLoginModal(container) {
                         </button>
                     </div>
                     <h2 class="text-2xl font-bold ${styles.textPrimary} mb-1">${user.name}</h2>
-                    <p class="text-xs ${styles.textSecondary}">${user.email}</p>
+                    <div class="flex items-center justify-center gap-2 mb-2">
+                        <p class="text-xs ${styles.textSecondary}">${user.email}</p>
+                        <span class="px-2 py-1 rounded-full text-xs font-bold ${user.userType === 'teacher' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'}">
+                            <i data-lucide="${user.userType === 'teacher' ? 'graduation-cap' : 'book-open'}" size="12" class="inline mr-1"></i>
+                            ${user.userType === 'teacher' ? '👨‍🏫 Giáo viên' : '📚 Học sinh'}
+                        </span>
+                    </div>
                 </div>
                 <!-- Nội dung profile có thanh cuộn -->
                 <div class="flex-1 overflow-y-auto space-y-5 pr-1 custom-scrollbar">
@@ -2374,7 +2458,10 @@ function renderLoginModal(container) {
                     </div>
                 </div>
                 <!-- Social Actions -->
-                <div class="grid grid-cols-2 gap-2 pt-3">
+                <div class="grid grid-cols-3 gap-2 pt-3">
+                    <button onclick="renderMyPromptsModal(document.getElementById('modal-body')); lucide.createIcons();" class="py-2 rounded-xl border ${styles.border} ${styles.textPrimary} hover:border-indigo-500/50 hover:bg-indigo-500/5 font-bold transition-all flex items-center justify-center gap-2 text-xs">
+                        <i data-lucide="list" size="16"></i> Prompt
+                    </button>
                     <button onclick="openFriendsModal()" class="py-2 rounded-xl border ${styles.border} ${styles.textPrimary} hover:border-blue-500/50 hover:bg-blue-500/5 font-bold transition-all flex items-center justify-center gap-2 text-xs">
                         <i data-lucide="users" size="16"></i> Bạn bè
                     </button>
@@ -2411,6 +2498,26 @@ function renderLoginModal(container) {
                         <div class="relative">
                             <i data-lucide="user" size="18" class="absolute left-4 top-3.5 ${styles.textSecondary}"></i>
                             <input type="text" name="name" class="w-full ${styles.inputBg} border ${styles.border} rounded-xl pl-12 pr-4 py-3 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all" placeholder="VD: Minh Nhật">
+                        </div>
+                    </div>
+
+                    <div id="user-type-field" class="hidden space-y-3">
+                        <label class="block text-sm font-medium ${styles.textSecondary} mb-3">Bạn là:</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="userType" value="student" checked class="absolute opacity-0 w-full h-full cursor-pointer">
+                                <div class="p-4 rounded-xl border-2 ${styles.border} hover:border-indigo-500 transition-all has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-500/10 text-center">
+                                    <i data-lucide="book-open" size="24" class="mx-auto mb-2 ${styles.textPrimary}"></i>
+                                    <p class="font-bold text-sm ${styles.textPrimary}">Học sinh</p>
+                                </div>
+                            </label>
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="userType" value="teacher" class="absolute opacity-0 w-full h-full cursor-pointer">
+                                <div class="p-4 rounded-xl border-2 ${styles.border} hover:border-indigo-500 transition-all has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-500/10 text-center">
+                                    <i data-lucide="graduation-cap" size="24" class="mx-auto mb-2 ${styles.textPrimary}"></i>
+                                    <p class="font-bold text-sm ${styles.textPrimary}">Giáo viên</p>
+                                </div>
+                            </label>
                         </div>
                     </div>
                     
@@ -3226,6 +3333,185 @@ function handleAvatarImageSelect(event) {
 // ==========================================
 // SOCIAL FEATURES (Friends & Share)
 // ==========================================
+
+// Xử lý prompt dựa trên role
+function getDisplayPrompts() {
+    const user = state.currentUser;
+    let allPrompts = [...MASTER_PROMPTS];
+    
+    if (user && user.userType === 'teacher') {
+        // Giáo viên: Thêm prompt cố định + prompt của chính họ
+        allPrompts = allPrompts.filter(p => !p.isTeacherFixed || p.createdBy === user.id);
+        if (user.customPrompts && user.customPrompts.length > 0) {
+            allPrompts.push(...user.customPrompts);
+        }
+    } else if (user && user.userType === 'student') {
+        // Học sinh: Thêm prompt cố định + prompt của chính họ + prompt được chia sẻ
+        allPrompts = allPrompts.filter(p => !p.createdBy); // Chỉ prompt cố định
+        if (user.customPrompts && user.customPrompts.length > 0) {
+            allPrompts.push(...user.customPrompts);
+        }
+        if (user.sharedPrompts && user.sharedPrompts.length > 0) {
+            allPrompts.push(...user.sharedPrompts);
+        }
+    }
+    
+    return allPrompts;
+}
+
+function canDeletePrompt(promptId) {
+    const user = state.currentUser;
+    if (!user) return false;
+    
+    const prompt = MASTER_PROMPTS.find(p => p.id === promptId);
+    if (prompt) {
+        // Chỉ giáo viên mới có thể xóa prompt cố định
+        return user.userType === 'teacher';
+    }
+    
+    // Có thể xóa prompt của riêng mình
+    return true;
+}
+
+function canEditPrompt(promptId) {
+    const user = state.currentUser;
+    if (!user) return false;
+    
+    // Chỉ có thể edit prompt của riêng mình
+    const customPrompt = user.customPrompts?.find(p => p.id === promptId);
+    return !!customPrompt;
+}
+
+function addPromptToSystem() {
+    if (!state.currentUser) {
+        openModal('login');
+        showToast("Vui lòng đăng nhập trước!");
+        return;
+    }
+    
+    const user = state.currentUser;
+    const title = prompt("Nhập tiêu đề prompt:");
+    if (!title) return;
+    
+    const description = prompt("Nhập mô tả ngắn:");
+    if (!description) return;
+    
+    const content = prompt("Nhập nội dung prompt:");
+    if (!content) return;
+    
+    const newPrompt = {
+        id: Date.now(),
+        title: title,
+        description: description,
+        content: content,
+        category: "Cá nhân",
+        tags: ["Custom"],
+        createdBy: user.id,
+        createdAt: new Date().toISOString(),
+        isShared: false,
+        sharedWith: [],
+        isTeacherFixed: user.userType === 'teacher' // Giáo viên: prompt sẽ là "cố định"
+    };
+    
+    if (!user.customPrompts) user.customPrompts = [];
+    user.customPrompts.push(newPrompt);
+    
+    // Nếu là giáo viên, thêm vào MASTER_PROMPTS (toàn hệ thống)
+    if (user.userType === 'teacher') {
+        newPrompt.isTeacherFixed = true;
+        MASTER_PROMPTS.push(newPrompt);
+    }
+    
+    // Lưu
+    state.currentUser = user;
+    localStorage.setItem('pm_currentUser', JSON.stringify(user));
+    const users = JSON.parse(localStorage.getItem('pm_users') || '[]');
+    const idx = users.findIndex(u => u.id === user.id);
+    if (idx !== -1) {
+        users[idx] = user;
+        localStorage.setItem('pm_users', JSON.stringify(users));
+    }
+    
+    showToast(`✓ ${user.userType === 'teacher' ? 'Prompt đã được thêm vào hệ thống!' : 'Prompt đã được lưu trong tài khoản của bạn!'}`);
+    renderApp();
+}
+
+function sharePrompt(promptId) {
+    if (!state.currentUser) {
+        openModal('login');
+        showToast("Vui lòng đăng nhập trước!");
+        return;
+    }
+    
+    const user = state.currentUser;
+    const emailInput = prompt("Nhập email bạn muốn chia sẻ:");
+    if (!emailInput) return;
+    
+    const friendUser = state.users.find(u => u.email === emailInput);
+    if (!friendUser) {
+        showToast("❌ Không tìm thấy người dùng!");
+        return;
+    }
+    
+    const prompt = user.customPrompts?.find(p => p.id === promptId);
+    if (!prompt) {
+        showToast("❌ Không tìm thấy prompt!");
+        return;
+    }
+    
+    if (!friendUser.sharedPrompts) friendUser.sharedPrompts = [];
+    
+    if (friendUser.sharedPrompts.some(p => p.id === promptId)) {
+        showToast("ℹ️ Prompt này đã được chia sẻ!");
+        return;
+    }
+    
+    friendUser.sharedPrompts.push({...prompt, sharedFrom: user.id});
+    
+    // Lưu
+    const users = JSON.parse(localStorage.getItem('pm_users') || '[]');
+    const friendIdx = users.findIndex(u => u.id === friendUser.id);
+    if (friendIdx !== -1) {
+        users[friendIdx] = friendUser;
+        localStorage.setItem('pm_users', JSON.stringify(users));
+    }
+    
+    showToast("✓ Đã chia sẻ prompt thành công!");
+}
+
+function deletePrompt(promptId) {
+    if (!canDeletePrompt(promptId)) {
+        showToast("❌ Bạn không có quyền xóa prompt này!");
+        return;
+    }
+    
+    const user = state.currentUser;
+    const promptIndex = user.customPrompts?.findIndex(p => p.id === promptId);
+    
+    if (promptIndex !== undefined && promptIndex >= 0) {
+        user.customPrompts.splice(promptIndex, 1);
+        
+        // Nếu là prompt cố định, xóa từ MASTER_PROMPTS
+        const masterIndex = MASTER_PROMPTS.findIndex(p => p.id === promptId);
+        if (masterIndex >= 0) {
+            MASTER_PROMPTS.splice(masterIndex, 1);
+        }
+        
+        // Lưu
+        state.currentUser = user;
+        localStorage.setItem('pm_currentUser', JSON.stringify(user));
+        const users = JSON.parse(localStorage.getItem('pm_users') || '[]');
+        const userIdx = users.findIndex(u => u.id === user.id);
+        if (userIdx !== -1) {
+            users[userIdx] = user;
+            localStorage.setItem('pm_users', JSON.stringify(users));
+        }
+        
+        showToast("✓ Đã xóa prompt!");
+        renderApp();
+    }
+}
+
 function openFriendsModal() {
     openModal('friends');
 }
