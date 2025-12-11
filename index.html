@@ -21,6 +21,36 @@
         emailjs.init('service_1nrvxhz');
     </script>
 
+    <!-- Firebase -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set, get, push, onValue, update, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyA5JfpN7Sk3tdCBDa7u5coDbjrwx7D2GV8",
+            authDomain: "prompt-573fc.firebaseapp.com",
+            databaseURL: "https://prompt-573fc-default-rtdb.firebaseio.com",
+            projectId: "prompt-573fc",
+            storageBucket: "prompt-573fc.firebasestorage.app",
+            messagingSenderId: "362695103484",
+            appId: "1:362695103484:web:036d2d722e6754aeaed879",
+            measurementId: "G-9X3DY739S9"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        
+        // Export to window for use in app.js
+        window.firebaseDB = database;
+        window.firebaseRef = ref;
+        window.firebaseSet = set;
+        window.firebaseGet = get;
+        window.firebasePush = push;
+        window.firebaseOnValue = onValue;
+        window.firebaseUpdate = update;
+        window.firebaseRemove = remove;
+    </script>
+
     <!-- Html2Canvas -->
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 

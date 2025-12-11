@@ -243,8 +243,106 @@ let state = {
     // Kiểu trả lời: 'fast' (nhanh - hiển thị toàn bộ) hoặc 'detailed' (chi tiết - typewriter)
     responseMode: 'detailed',
     isLoadingPrompts: false,
-    loadingTimer: null
+    loadingTimer: null,
+    // Firebase sync
+    firebaseSynced: false
 };
+
+// ==========================================
+// FIREBASE SYNC FUNCTIONS
+// ==========================================
+
+// Khởi tạo Firebase listeners
+function initFirebase() {
+    if (!window.firebaseDB) {
+        console.warn('Firebase not loaded yet');
+        setTimeout(initFirebase, 1000);
+        return;
+    }
+    
+    // Listen to users changes
+    const usersRef = window.firebaseRef(window.firebaseDB, 'users');
+    window.firebaseOnValue(usersRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const firebaseUsers = [];
+            snapshot.forEach((child) => {
+                firebaseUsers.push({ id: child.key, ...child.val() });
+            });
+            state.users = firebaseUsers;
+            localStorage.setItem('pm_users', JSON.stringify(firebaseUsers));
+        }
+    });
+    
+    // Listen to prompts changes
+    const promptsRef = window.firebaseRef(window.firebaseDB, 'prompts');
+    window.firebaseOnValue(promptsRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const firebasePrompts = [];
+            snapshot.forEach((child) => {
+                firebasePrompts.push({ id: child.key, ...child.val() });
+            });
+            // Merge with MASTER_PROMPTS
+            state.prompts = [...MASTER_PROMPTS, ...firebasePrompts];
+            localStorage.setItem('pm_prompts', JSON.stringify(state.prompts));
+            if (state.currentView === 'library') {
+                renderApp();
+            }
+        }
+    });
+    
+    state.firebaseSynced = true;
+}
+
+// Sync user to Firebase
+async function syncUserToFirebase(user) {
+    if (!window.firebaseDB) return;
+    
+    const userRef = window.firebaseRef(window.firebaseDB, `users/${user.id}`);
+    await window.firebaseSet(userRef, {
+        email: user.email,
+        name: user.name,
+        userType: user.userType,
+        avatar: user.avatar,
+        createdAt: user.createdAt,
+        lastLogin: Date.now()
+    });
+}
+
+// Sync prompt to Firebase
+async function syncPromptToFirebase(prompt) {
+    if (!window.firebaseDB) return;
+    
+    const promptRef = window.firebaseRef(window.firebaseDB, `prompts/${prompt.id}`);
+    await window.firebaseSet(promptRef, prompt);
+}
+
+// Delete prompt from Firebase
+async function deletePromptFromFirebase(promptId) {
+    if (!window.firebaseDB) return;
+    
+    const promptRef = window.firebaseRef(window.firebaseDB, `prompts/${promptId}`);
+    await window.firebaseRemove(promptRef);
+}
+
+// Search users in Firebase
+async function searchUsersInFirebase(query) {
+    if (!window.firebaseDB) return [];
+    
+    const usersRef = window.firebaseRef(window.firebaseDB, 'users');
+    const snapshot = await window.firebaseGet(usersRef);
+    
+    if (!snapshot.exists()) return [];
+    
+    const users = [];
+    snapshot.forEach((child) => {
+        const user = { id: child.key, ...child.val() };
+        if (user.email.includes(query) || user.name?.includes(query)) {
+            users.push(user);
+        }
+    });
+    
+    return users;
+}
 
 // ==========================================
 // 2. HELPER FUNCTIONS
@@ -508,6 +606,9 @@ function handleRegister(e) {
     localStorage.setItem('pm_users', JSON.stringify(state.users));
     state.currentUser = newUser;
     localStorage.setItem('pm_currentUser', JSON.stringify(newUser));
+    
+    // Sync to Firebase
+    syncUserToFirebase(newUser);
     
     closeModal();
     renderApp();
@@ -3527,6 +3628,12 @@ function addPromptToSystem() {
         localStorage.setItem('pm_users', JSON.stringify(users));
     }
     
+    // Sync to Firebase
+    if (user.userType === 'teacher') {
+        syncPromptToFirebase(newPrompt);
+    }
+    syncUserToFirebase(user);
+    
     showToast(`✓ ${user.userType === 'teacher' ? 'Prompt đã được thêm vào hệ thống!' : 'Prompt đã được lưu trong tài khoản của bạn!'}`);
     renderApp();
 }
@@ -3814,4 +3921,5 @@ window.onload = () => {
     applyTheme();
     setupShortcuts();
     renderApp();
+    initFirebase(); // Initialize Firebase sync
 };
