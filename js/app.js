@@ -440,6 +440,31 @@ function handleRegister(e) {
     showToast("Đăng ký thành công!");
 }
 
+function handleForgotPassword() {
+    const emailInput = document.getElementById('auth-email');
+    const email = emailInput?.value.trim();
+    if (!email) {
+        showToast("Nhập email để khôi phục mật khẩu");
+        emailInput?.focus();
+        return;
+    }
+    const user = state.users.find(u => u.email === email);
+    if (!user) {
+        showToast("Không tìm thấy tài khoản với email này");
+        return;
+    }
+    showToast(`Mật khẩu của bạn: ${user.password}`);
+}
+
+function togglePasswordVisibility() {
+    const input = document.getElementById('auth-password');
+    const btn = document.getElementById('password-toggle-btn');
+    if (!input || !btn) return;
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    btn.textContent = isHidden ? 'Ẩn' : 'Hiện';
+}
+
 function handleLogout() {
     state.currentUser = null;
     localStorage.removeItem('pm_currentUser');
@@ -2343,15 +2368,19 @@ function renderLoginModal(container) {
                         <label class="block text-sm font-medium ${styles.textSecondary} mb-2">Email</label>
                         <div class="relative">
                             <i data-lucide="mail" size="18" class="absolute left-4 top-3.5 ${styles.textSecondary}"></i>
-                            <input type="email" name="email" required class="w-full ${styles.inputBg} border ${styles.border} rounded-xl pl-12 pr-4 py-3 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all" placeholder="name@example.com">
+                            <input id="auth-email" type="email" name="email" required class="w-full ${styles.inputBg} border ${styles.border} rounded-xl pl-12 pr-4 py-3 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all" placeholder="name@example.com">
                         </div>
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-medium ${styles.textSecondary} mb-2">Mật khẩu</label>
+                        <label class="block text-sm font-medium ${styles.textSecondary} mb-2 flex items-center justify-between">
+                            <span>Mật khẩu</span>
+                            <button type="button" onclick="handleForgotPassword()" class="text-xs text-indigo-500 hover:underline">Quên mật khẩu?</button>
+                        </label>
                         <div class="relative">
                             <i data-lucide="lock" size="18" class="absolute left-4 top-3.5 ${styles.textSecondary}"></i>
-                            <input type="password" name="password" required class="w-full ${styles.inputBg} border ${styles.border} rounded-xl pl-12 pr-4 py-3 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all" placeholder="••••••••">
+                            <input id="auth-password" type="password" name="password" required class="w-full ${styles.inputBg} border ${styles.border} rounded-xl pl-12 pr-12 py-3 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all" placeholder="••••••••">
+                            <button type="button" id="password-toggle-btn" onclick="togglePasswordVisibility()" class="absolute right-3 top-2.5 px-3 py-1 text-xs rounded-lg ${styles.iconBg} ${styles.textSecondary} hover:${styles.textPrimary} border ${styles.border}">Hiện</button>
                         </div>
                     </div>
 
