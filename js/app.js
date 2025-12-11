@@ -2841,142 +2841,15 @@ function setSubject(sub) {
 // ==========================================
 // EXTENSION INSTALLATION
 // ==========================================
-function downloadInstallScript() {
-    const psContent = `# Cài đặt AI Prompt Refiner Extension - PowerShell Script
-# Chạy: Right-click -> Run with PowerShell hoặc Windows PowerShell ISE
-
-Write-Host "======================================" -ForegroundColor Cyan
-Write-Host "  Cài đặt AI Prompt Refiner Extension" -ForegroundColor Cyan
-Write-Host "======================================" -ForegroundColor Cyan
-Write-Host ""
-
-# Lấy đường dẫn script folder
-$scriptPath = $PSScriptRoot
-if ([string]::IsNullOrWhiteSpace($scriptPath)) {
-    $scriptPath = Get-Location
-}
-
-$extensionPath = Join-Path $scriptPath "extension"
-$manifestPath = Join-Path $extensionPath "manifest.json"
-
-Write-Host "📁 Kiểm tra thư mục extension..." -ForegroundColor Yellow
-if (-not (Test-Path $extensionPath)) {
-    Write-Host "❌ Không tìm thấy thư mục extension!" -ForegroundColor Red
-    Write-Host "   Kiểm tra: $extensionPath" -ForegroundColor Red
-    Read-Host "Nhấn Enter để thoát"
-    exit 1
-}
-
-if (-not (Test-Path $manifestPath)) {
-    Write-Host "❌ Không tìm thấy manifest.json!" -ForegroundColor Red
-    Read-Host "Nhấn Enter để thoát"
-    exit 1
-}
-
-Write-Host "✓ Tìm thấy extension tại: $extensionPath" -ForegroundColor Green
-Write-Host ""
-
-# Tìm Chrome
-Write-Host "🔍 Tìm Chrome/Edge installation..." -ForegroundColor Yellow
-
-$chromePath = $null
-$browserType = $null
-$possiblePaths = @(
-    @{ Path = "$env:ProgramFiles\\Google\\Chrome\\Application\\chrome.exe"; Type = "Chrome" },
-    @{ Path = "$env:ProgramFiles(x86)\\Google\\Chrome\\Application\\chrome.exe"; Type = "Chrome" },
-    @{ Path = "$env:LOCALAPPDATA\\Google\\Chrome\\Application\\chrome.exe"; Type = "Chrome" },
-    @{ Path = "$env:ProgramFiles\\Microsoft\\Edge\\Application\\msedge.exe"; Type = "Edge" },
-    @{ Path = "$env:ProgramFiles(x86)\\Microsoft\\Edge\\Application\\msedge.exe"; Type = "Edge" },
-    @{ Path = "$env:LOCALAPPDATA\\Microsoft\\Edge\\Application\\msedge.exe"; Type = "Edge" }
-)
-
-foreach ($item in $possiblePaths) {
-    if (Test-Path $item.Path) {
-        $chromePath = $item.Path
-        $browserType = $item.Type
-        break
-    }
-}
-
-if (-not $chromePath) {
-    Write-Host "❌ Không tìm thấy Chrome hoặc Edge!" -ForegroundColor Red
-    Write-Host "Vui lòng cài đặt Chrome hoặc Edge trước khi chạy script này" -ForegroundColor Yellow
-    Read-Host "Nhấn Enter để thoát"
-    exit 1
-}
-
-Write-Host "✓ Tìm thấy $browserType tại: $chromePath" -ForegroundColor Green
-Write-Host ""
-
-# Tìm extensions folder
-Write-Host "📂 Tìm thư mục extensions..." -ForegroundColor Yellow
-
-if ($browserType -eq "Edge") {
-    $extensionsPath = "$env:LOCALAPPDATA\\Microsoft\\Edge\\User Data\\Default\\Extensions"
-} else {
-    $extensionsPath = "$env:LOCALAPPDATA\\Google\\Chrome\\User Data\\Default\\Extensions"
-}
-
-if (-not (Test-Path $extensionsPath)) {
-    Write-Host "⚠️  Tạo thư mục extensions..." -ForegroundColor Yellow
-    New-Item -ItemType Directory -Path $extensionsPath -Force | Out-Null
-}
-
-Write-Host "✓ Extensions folder: $extensionsPath" -ForegroundColor Green
-Write-Host ""
-
-# Copy extension
-Write-Host "📦 Copy extension files..." -ForegroundColor Yellow
-
-$destPath = Join-Path $extensionsPath "ai-prompt-refiner"
-
-if (Test-Path $destPath) {
-    Write-Host "   Xóa version cũ..." -ForegroundColor Gray
-    Remove-Item -Path $destPath -Recurse -Force -ErrorAction SilentlyContinue
-}
-
-Write-Host "   Copy files..." -ForegroundColor Gray
-try {
-    Copy-Item -Path "$extensionPath\\*" -Destination $destPath -Recurse -Force
-    Write-Host "✓ Copy thành công!" -ForegroundColor Green
-} catch {
-    Write-Host "❌ Lỗi khi copy files: $($_)" -ForegroundColor Red
-    Read-Host "Nhấn Enter để thoát"
-    exit 1
-}
-
-Write-Host ""
-
-# Mở Chrome Extensions page
-Write-Host "🌐 Mở $browserType Extensions page..." -ForegroundColor Yellow
-Write-Host ""
-
-Start-Process -FilePath $chromePath -ArgumentList "chrome://extensions/" -ErrorAction SilentlyContinue
-
-Write-Host "======================================" -ForegroundColor Green
-Write-Host "   ✓ Cài đặt thành công!" -ForegroundColor Green
-Write-Host "======================================" -ForegroundColor Green
-Write-Host ""
-Write-Host "📋 Bước tiếp theo:" -ForegroundColor Cyan
-Write-Host "   1. Bạn sẽ thấy trang Extensions mở ra" -ForegroundColor White
-Write-Host "   2. Tìm 'AI Prompt Refiner' trong danh sách" -ForegroundColor White
-Write-Host "   3. Kiểm tra xem nó đã bật (enabled) hay chưa" -ForegroundColor White
-Write-Host ""
-Write-Host "💡 Nếu bạn không thấy extension:" -ForegroundColor Yellow
-Write-Host "   - Reload trang (F5)" -ForegroundColor White
-Write-Host "   - Hoặc đóng $browserType và chạy lại script này" -ForegroundColor White
-Write-Host ""
-
-Read-Host "Nhấn Enter để kết thúc"`;
-
-    const element = document.createElement('a');
-    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(psContent));
-    element.setAttribute('download', 'install-extension.ps1');
-    element.style.display = 'none';
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-    showToast('Đã tải file install-extension.ps1!');
+function downloadExtensionSetup() {
+    // Download ZIP file containing extension + script
+    const link = document.createElement('a');
+    link.href = './AI-Prompt-Refiner-Setup.zip';
+    link.download = 'AI-Prompt-Refiner-Setup.zip';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Đang tải file AI-Prompt-Refiner-Setup.zip...');
 }
 
 function installExtension() {
@@ -2998,11 +2871,11 @@ function installExtension() {
                     <div class="flex items-start gap-3">
                         <div class="flex-shrink-0 w-8 h-8 rounded-full ${getColorClass('softBg')} flex items-center justify-center font-bold ${getColorClass('text')} text-sm">1</div>
                         <div class="flex-1">
-                            <p class="font-semibold ${styles.textPrimary} mb-1">Tải file cài đặt</p>
-                            <p class="${styles.textSecondary} text-sm mb-3">Nhấp nút dưới để tải file install-extension.ps1</p>
-                            <button onclick="downloadInstallScript()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg ${getColorClass('bg')} hover:opacity-90 text-white font-semibold text-sm transition-all">
+                            <p class="font-semibold ${styles.textPrimary} mb-1">📥 Tải file cài đặt (ZIP)</p>
+                            <p class="${styles.textSecondary} text-sm mb-3">File ZIP chứa extension + script cài đặt sẵn sàng</p>
+                            <button onclick="downloadExtensionSetup()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg ${getColorClass('bg')} hover:opacity-90 text-white font-semibold text-sm transition-all">
                                 <i data-lucide="download" size="16"></i>
-                                Tải install-extension.ps1
+                                Tải AI-Prompt-Refiner-Setup.zip
                             </button>
                         </div>
                     </div>
@@ -3012,17 +2885,25 @@ function installExtension() {
                     <div class="flex items-start gap-3">
                         <div class="flex-shrink-0 w-8 h-8 rounded-full ${getColorClass('softBg')} flex items-center justify-center font-bold ${getColorClass('text')} text-sm">2</div>
                         <div class="flex-1">
-                            <p class="font-semibold ${styles.textPrimary} mb-1">Chạy script PowerShell</p>
+                            <p class="font-semibold ${styles.textPrimary} mb-1">📂 Giải nén ZIP</p>
                             <p class="${styles.textSecondary} text-sm mb-2">
-                                <strong>Cách 1 (Dễ nhất):</strong> Nhấp chuột phải trên file <span class="font-mono bg-black/20 px-1.5 py-0.5 rounded text-xs">install-extension.ps1</span>
+                                Bấm chuột phải vào file ZIP → <span class="font-bold">Extract All</span>
+                            </p>
+                            <p class="${styles.textSecondary} text-sm">Hoặc dùng 7-Zip, WinRAR để giải nén</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-lg ${styles.inputBg} border ${styles.border} p-4">
+                    <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0 w-8 h-8 rounded-full ${getColorClass('softBg')} flex items-center justify-center font-bold ${getColorClass('text')} text-sm">3</div>
+                        <div class="flex-1">
+                            <p class="font-semibold ${styles.textPrimary} mb-1">⚙️ Chạy script cài đặt</p>
+                            <p class="${styles.textSecondary} text-sm mb-2">
+                                Bấp chuột phải trên <span class="font-mono bg-black/20 px-1.5 py-0.5 rounded text-xs">install-extension.ps1</span>
                             </p>
                             <p class="${styles.textSecondary} text-sm mb-3">Chọn: <span class="font-bold">"Run with PowerShell ISE"</span></p>
-                            <p class="${styles.textSecondary} text-sm">
-                                <strong>Cách 2:</strong> Mở PowerShell tại thư mục chứa file, gõ:
-                            </p>
-                            <div class="bg-black/40 border border-white/10 rounded-lg p-2 font-mono text-xs text-emerald-400 mt-2 overflow-auto">
-.\\install-extension.ps1
-                            </div>
+                            <p class="${styles.textSecondary} text-sm text-yellow-600">⚠️ Quan trọng: Script sẽ tự động copy extension và mở browser!</p>
                         </div>
                     </div>
                 </div>
@@ -3032,8 +2913,8 @@ function installExtension() {
                 <div class="flex gap-3">
                     <i data-lucide="check-circle" size="20" class="text-green-500 flex-shrink-0 mt-0.5"></i>
                     <div>
-                        <p class="font-semibold text-green-600">Hoàn tất!</p>
-                        <p class="text-sm text-green-600/80 mt-1">Trình duyệt sẽ mở trang Extensions. Bạn sẽ thấy "AI Prompt Refiner" đã được cài. Đó là xong! Ghé ChatGPT, Gemini hoặc Claude để sử dụng</p>
+                        <p class="font-semibold text-green-600">✅ Sau khi script chạy xong</p>
+                        <p class="text-sm text-green-600/80 mt-1">Trình duyệt sẽ tự động mở trang Extensions. Bạn sẽ thấy <strong>"AI Prompt Refiner"</strong> đã được cài đặt sẵn. Nó sẽ tự động được bật (enabled). Ghé ChatGPT, Gemini hoặc Claude để sử dụng ngay!</p>
                     </div>
                 </div>
             </div>
@@ -3042,8 +2923,12 @@ function installExtension() {
                 <div class="flex gap-3">
                     <i data-lucide="info" size="20" class="text-blue-500 flex-shrink-0 mt-0.5"></i>
                     <div>
-                        <p class="font-semibold text-blue-600">💡 Mẹo</p>
-                        <p class="text-sm text-blue-600/80 mt-1">Nếu không thấy tiện ích, reload trang Extensions (F5) hoặc chạy lại file .ps1</p>
+                        <p class="font-semibold text-blue-600">❓ Nếu có vấn đề?</p>
+                        <p class="text-sm text-blue-600/80 mt-1">
+                            • Kiểm tra hộp thoại PowerShell - nó sẽ hiển thị từng bước<br>
+                            • Đảm bảo bạn không chọn "Run with Administrator"<br>
+                            • Nếu script báo lỗi, xem báo cáo trong PowerShell window
+                        </p>
                     </div>
                 </div>
             </div>
