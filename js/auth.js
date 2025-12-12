@@ -539,9 +539,18 @@ async function signInWithEmailLink(email, name, userType = 'student') {
  */
 async function firebaseGuestLogin(guestName = 'Guest') {
     try {
+        console.log('🔍 Starting anonymous login...');
+        
+        // Kiểm tra xem firebaseSignInAnonymously có tồn tại không
+        if (!window.firebaseSignInAnonymously) {
+            throw new Error('firebaseSignInAnonymously is not available');
+        }
+        
         const userCredential = await window.firebaseSignInAnonymously(window.firebaseAuth);
         const user = userCredential.user;
         const userId = user.uid;
+        
+        console.log('✅ Anonymous auth successful, userId:', userId);
         
         // Lưu thông tin guest vào Realtime Database
         const userRef = window.firebaseRef(window.firebaseDB, `users/${userId}`);
@@ -569,9 +578,21 @@ async function firebaseGuestLogin(guestName = 'Guest') {
         
         return { success: true, userId };
     } catch (error) {
-        console.error('❌ Lỗi đăng nhập ẩn danh:', error.message);
-        showToast('❌ Không thể đăng nhập ẩn danh. Vui lòng thử lại.');
-        return { success: false, error: error.message };
+        console.error('❌ Lỗi đăng nhập ẩn danh:', error);
+        
+        let errorMsg = 'Không thể đăng nhập ẩn danh.';
+        
+        // Xử lý các lỗi cụ thể
+        if (error.code === 'auth/operation-not-allowed') {
+            errorMsg = 'Đăng nhập ẩn danh chưa được bật trên Firebase. Vui lòng liên hệ admin.';
+        } else if (error.code === 'auth/network-request-failed') {
+            errorMsg = 'Lỗi kết nối mạng. Vui lòng kiểm tra internet.';
+        } else if (error.message) {
+            errorMsg = error.message;
+        }
+        
+        showToast(`❌ ${errorMsg}`);
+        return { success: false, error: errorMsg };
     }
 }
 

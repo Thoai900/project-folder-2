@@ -3841,14 +3841,26 @@ function renderGuestAuthModal(container) {
 async function handleGuestAuthLogin() {
     const guestName = document.getElementById('guest-name-input').value || 'Guest User';
 
+    console.log('🔍 Attempting guest login with name:', guestName);
+    
     showToast('⏳ Đang đăng nhập...');
 
-    const result = await firebaseGuestLogin(guestName);
+    try {
+        const result = await firebaseGuestLogin(guestName);
 
-    if (result.success) {
-        closeModal();
-        renderApp();
-        showToast('✓ Đăng nhập ẩn danh thành công!');
+        console.log('🔍 Guest login result:', result);
+
+        if (result.success) {
+            closeModal();
+            renderApp();
+            showToast('✓ Đăng nhập ẩn danh thành công!');
+        } else {
+            console.error('❌ Guest login failed:', result.error);
+            showToast(`❌ Lỗi: ${result.error || 'Không thể đăng nhập'}`);
+        }
+    } catch (error) {
+        console.error('❌ Exception during guest login:', error);
+        showToast(`❌ Lỗi: ${error.message}`);
     }
 }
 
