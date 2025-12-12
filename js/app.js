@@ -733,7 +733,7 @@ window.toggleAuthMode = function() {
 };
 
 // --- Favorites ---
-function toggleFavorite(e, promptId) {
+async function toggleFavorite(e, promptId) {
     e.stopPropagation();
     if (!state.currentUser) {
         openModal('login');
@@ -741,23 +741,31 @@ function toggleFavorite(e, promptId) {
         return;
     }
 
-    const userIndex = state.users.findIndex(u => u.id === state.currentUser.id);
-    if (userIndex === -1) return;
-
-    const user = state.users[userIndex];
-    if (user.favorites.includes(promptId)) {
+    const user = state.currentUser;
+    if (!user.favorites) user.favorites = [];
+    
+    const isFavorited = user.favorites.includes(promptId);
+    
+    if (isFavorited) {
         user.favorites = user.favorites.filter(id => id !== promptId);
-        showToast("Đã xóa khỏi yêu thích.");
     } else {
         user.favorites.push(promptId);
-        showToast("Đã thêm vào yêu thích!");
     }
 
-    state.users[userIndex] = user;
-    state.currentUser = user;
-    localStorage.setItem('pm_users', JSON.stringify(state.users));
-    localStorage.setItem('pm_currentUser', JSON.stringify(state.currentUser));
-    renderApp();
+    // Sync với Firebase
+    try {
+        const favRef = window.firebaseRef(window.firebaseDB, `users/${user.id}/favorites`);
+        await window.firebaseSet(favRef, user.favorites);
+        
+        state.currentUser = user;
+        localStorage.setItem('pm_currentUser', JSON.stringify(user));
+        
+        showToast(isFavorited ? "Đã xóa khỏi yêu thích." : "Đã thêm vào yêu thích!");
+        renderApp();
+    } catch (error) {
+        console.error('❌ Lỗi cập nhật yêu thích:', error);
+        showToast("❌ Không thể cập nhật. Vui lòng thử lại.");
+    }
 }
 
 function getAvatarColor(name) {

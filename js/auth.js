@@ -225,6 +225,16 @@ function watchAuthState(callback) {
                     }
                 }
                 
+                // Chuyển đổi favorites sang array (nếu cần)
+                let favorites = [];
+                if (userData.favorites) {
+                    if (Array.isArray(userData.favorites)) {
+                        favorites = userData.favorites;
+                    } else if (typeof userData.favorites === 'object') {
+                        favorites = Object.values(userData.favorites);
+                    }
+                }
+                
                 // Sync public user profile (cập nhật name nếu thay đổi)
                 const publicUserRef = window.firebaseRef(window.firebaseDB, `publicUsers/${user.uid}`);
                 await window.firebaseSet(publicUserRef, {
@@ -238,7 +248,8 @@ function watchAuthState(callback) {
                     id: user.uid,
                     email: user.email,
                     ...userData,
-                    friends: friends
+                    friends: friends,
+                    favorites: favorites
                 };
                 
                 // Lưu vào localStorage để truy cập nhanh
