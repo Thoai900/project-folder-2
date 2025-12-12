@@ -15,21 +15,16 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- EmailJS -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/index.min.js"></script>
-    <script type="text/javascript">
-        emailjs.init('service_1nrvxhz');
-    </script>
-
     <!-- Firebase -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getDatabase, ref, set, get, push, onValue, update, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         
         const firebaseConfig = {
             apiKey: "AIzaSyA5JfpN7Sk3tdCBDa7u5coDbjrwx7D2GV8",
             authDomain: "prompt-573fc.firebaseapp.com",
-            databaseURL: "https://prompt-573fc-default-rtdb.firebaseio.com",
+            databaseURL: "https://prompt-573fc-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "prompt-573fc",
             storageBucket: "prompt-573fc.firebasestorage.app",
             messagingSenderId: "362695103484",
@@ -39,6 +34,7 @@
         
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
+        const auth = getAuth(app);
         
         // Export to window for use in app.js
         window.firebaseDB = database;
@@ -49,6 +45,14 @@
         window.firebaseOnValue = onValue;
         window.firebaseUpdate = update;
         window.firebaseRemove = remove;
+        
+        // Firebase Authentication exports
+        window.firebaseAuth = auth;
+        window.firebaseCreateUserWithEmailAndPassword = createUserWithEmailAndPassword;
+        window.firebaseSignInWithEmailAndPassword = signInWithEmailAndPassword;
+        window.firebaseSignOut = signOut;
+        window.firebaseOnAuthStateChanged = onAuthStateChanged;
+        window.firebaseSendPasswordResetEmail = sendPasswordResetEmail;
     </script>
 
     <!-- Html2Canvas -->
@@ -105,15 +109,17 @@
 
     <!-- App Logic & Data -->
     <script src="js/data.js"></script>
+    <script src="js/auth.js"></script>
     <script src="js/app.js"></script>
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js').catch(err => {
-                    console.error('Service Worker registration failed:', err);
-                });
-            });
-        }
+        // Service Worker - Disabled temporarily (requires HTTPS or localhost)
+        // if ('serviceWorker' in navigator) {
+        //     window.addEventListener('load', () => {
+        //         navigator.serviceWorker.register('./service-worker.js').catch(err => {
+        //             console.error('Service Worker registration failed:', err);
+        //         });
+        //     });
+        // }
     </script>
 </body>
 </html>

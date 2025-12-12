@@ -556,244 +556,70 @@ function openQuickTestModal(promptId) {
 }
 
 // --- Auth ---
-function handleLogin(e) {
+async function handleLogin(e) {
     e.preventDefault();
-    const email = e.target.email.value;
-    const password = e.target.password.value;
+    const email = document.querySelector('#auth-form input[name="email"]').value;
+    const password = document.querySelector('#auth-form input[name="password"]').value;
     
-    const user = state.users.find(u => u.email === email && u.password === password);
-    if (user) {
-        state.currentUser = user;
-        localStorage.setItem('pm_currentUser', JSON.stringify(user));
-        closeModal();
-        renderApp();
-        showToast(`Chào mừng trở lại, ${user.name}!`);
-    } else {
-        showToast("Email hoặc mật khẩu không đúng!");
-    }
-}
-
-function handleRegister(e) {
-    e.preventDefault();
-    const name = e.target.name.value;
-    const email = e.target.email.value;
-    const password = e.target.password.value;
-    const userType = document.querySelector('input[name="userType"]:checked')?.value || 'student';
-
-    if (state.users.some(u => u.email === email)) {
-        showToast("Email này đã được sử dụng!");
+    if (!email || !password) {
+        showToast("Vui lòng nhập email và mật khẩu!");
         return;
     }
-
-    const newUser = {
-        id: Date.now(),
-        name: name,
-        email: email,
-        password: password,
-        userType: userType, // 'teacher' hoặc 'student'
-        favorites: [],
-        customPrompts: [],
-        createdAt: new Date().toISOString(),
-        apiKey: '',
-        avatarColor: 'bg-gradient-to-br from-indigo-600 to-purple-600',
-        avatarText: name.charAt(0).toUpperCase(),
-        avatarImage: '',
-        friends: [],
-        sharedPrompts: []
-    };
-
-    state.users.push(newUser);
-    localStorage.setItem('pm_users', JSON.stringify(state.users));
-    state.currentUser = newUser;
-    localStorage.setItem('pm_currentUser', JSON.stringify(newUser));
     
-    // Sync to Firebase
-    syncUserToFirebase(newUser);
+    // Đăng nhập bằng Firebase
+    const result = await firebaseLogin(email, password);
     
-    closeModal();
-    renderApp();
-    showToast(`Đăng ký thành công! Chào mừng ${userType === 'teacher' ? 'Thầy/Cô' : 'các bạn'} đến PromptMaster!`);
+    if (result.success) {
+        // Dữ liệu người dùng sẽ được load bởi watchAuthState
+        closeModal();
+        renderApp();
+    }
 }
 
-// --- Forgot Password - OTP Simple Flow ---
-function handleForgotPassword() {
+async function handleRegister(e) {
+    e.preventDefault();
+    const name = document.querySelector('#auth-form input[name="name"]').value;
+    const email = document.querySelector('#auth-form input[name="email"]').value;
+    const password = document.querySelector('#auth-form input[name="password"]').value;
+    const userType = document.querySelector('input[name="userType"]:checked')?.value || 'student';
+    
+    if (!name || !email || !password) {
+        showToast("Vui lòng nhập đầy đủ thông tin!");
+        return;
+    }
+    
+    if (password.length < 6) {
+        showToast("Mật khẩu phải có ít nhất 6 ký tự!");
+        return;
+    }
+    
+    // Đăng ký bằng Firebase
+    const result = await firebaseSignUp(email, password, name, userType);
+    
+    if (result.success) {
+        // Dữ liệu người dùng sẽ được load bởi watchAuthState
+        closeModal();
+        renderApp();
+    }
+}
+
+// --- Forgot Password - Firebase Password Reset ---
+async function handleForgotPassword() {
     const emailInput = document.querySelector('#auth-form input[name="email"]');
     const email = emailInput?.value?.trim();
     
     if (!email) {
-        showToast("Vui lòng nhập email để reset mật khẩu!");
+        showToast("Vui lòng nhập email!");
         emailInput?.focus();
         return;
     }
     
-    // Kiểm tra email có tồn tại không
-    const users = JSON.parse(localStorage.getItem('pm_users') || '[]');
-    const user = users.find(u => u.email === email);
+    // Gửi email reset password bằng Firebase
+    const result = await firebaseSendPasswordReset(email);
     
-    if (!user) {
-        showToast("❌ Email này không tồn tại trong hệ thống!");
-        return;
-    }
-    
-    // Tạo OTP 6 số
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpData = {
-        email: email,
-        otp: otp,
-        createdAt: Date.now(),
-        expiresIn: 300000 // 5 phút
-    };
-    
-    // Lưu OTP vào localStorage
-    let otpRequests = JSON.parse(localStorage.getItem('pm_otpRequests') || '[]');
-    otpRequests = otpRequests.filter(r => r.email !== email); // Xóa OTP cũ
-    otpRequests.push(otpData);
-    localStorage.setItem('pm_otpRequests', JSON.stringify(otpRequests));
-    
-    // Gửi OTP qua email
-    sendOTPEmail(email, otp);
-    
-    // Hiển thị form nhập OTP
-    showOTPForm(email);
-}
-
-// Gửi OTP qua email
-function sendOTPEmail(email, otp) {
-    if (typeof emailjs === 'undefined') {
-        console.warn('EmailJS not loaded. OTP:', otp);
-        showToast(`⚠️ EmailJS chưa setup. Mã OTP của bạn: ${otp}`);
-        return;
-    }
-    
-    const templateParams = {
-        to_email: email,
-        otp_code: otp,
-        message: `Mã OTP của bạn là: ${otp}. Mã có hiệu lực trong 5 phút.`
-    };
-    
-    emailjs.send('service_1nrvxhz', 'template_qrfjik7', templateParams)
-        .then(response => {
-            showToast('✓ Mã OTP đã được gửi tới email của bạn!');
-        })
-        .catch(error => {
-            showToast('❌ Không thể gửi email. Vui lòng thử lại.');
-            console.error('EmailJS Error:', error);
-        });
-}
-
-// Form nhập OTP
-function showOTPForm(email) {
-    const styles = getStyles();
-    const modalContent = document.getElementById('modal-body');
-    
-    modalContent.innerHTML = `
-        <div class="p-8 space-y-6">
-            <div class="text-center">
-                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl ${getColorClass('softBg')} mb-4">
-                    <i data-lucide="mail-check" size="32" class="${getColorClass('text')}"></i>
-                </div>
-                <h2 class="text-2xl font-black ${styles.textPrimary} mb-2">Nhập Mã OTP</h2>
-                <p class="${styles.textSecondary} text-sm">Mã xác nhận đã được gửi tới</p>
-                <p class="${styles.textPrimary} font-semibold">${email}</p>
-            </div>
-            
-            <div class="space-y-4">
-                <div>
-                    <label class="${styles.textPrimary} font-semibold block mb-2">Mã OTP (6 số)</label>
-                    <input type="text" id="otp-input" maxlength="6" placeholder="000000" 
-                        class="w-full px-4 py-3 rounded-lg ${styles.inputBg} border ${styles.border} ${styles.textPrimary} placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center text-2xl font-mono tracking-widest">
-                    <p class="${styles.textSecondary} text-xs mt-2">Mã có hiệu lực trong 5 phút</p>
-                </div>
-                
-                <div>
-                    <label class="${styles.textPrimary} font-semibold block mb-2">Mật khẩu mới</label>
-                    <input type="password" id="new-password" placeholder="Nhập mật khẩu mới" 
-                        class="w-full px-4 py-3 rounded-lg ${styles.inputBg} border ${styles.border} ${styles.textPrimary} placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-                
-                <div>
-                    <label class="${styles.textPrimary} font-semibold block mb-2">Xác nhận mật khẩu</label>
-                    <input type="password" id="confirm-password" placeholder="Nhập lại mật khẩu mới" 
-                        class="w-full px-4 py-3 rounded-lg ${styles.inputBg} border ${styles.border} ${styles.textPrimary} placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-            </div>
-            
-            <div class="flex gap-3 pt-4 border-t ${styles.border}">
-                <button onclick="closeModal()" class="flex-1 py-3 rounded-xl border ${styles.border} ${styles.textPrimary} hover:bg-white/5 font-bold transition-all">
-                    Hủy
-                </button>
-                <button onclick="verifyOTPAndResetPassword('${email}')" class="flex-1 py-3 rounded-xl ${getColorClass('bg')} hover:opacity-90 text-white font-bold transition-all">
-                    Xác Nhận
-                </button>
-            </div>
-        </div>
-    `;
-    
-    openModal();
-    lucide.createIcons();
-    
-    // Focus vào ô OTP
-    setTimeout(() => {
-        document.getElementById('otp-input')?.focus();
-    }, 100);
-}
-
-function verifyOTPAndResetPassword(email) {
-    const otpInput = document.getElementById('otp-input').value.trim();
-    const newPassword = document.getElementById('new-password').value.trim();
-    const confirmPassword = document.getElementById('confirm-password').value.trim();
-    
-    // Validate OTP
-    if (!otpInput || otpInput.length !== 6) {
-        showToast('⚠️ Vui lòng nhập mã OTP 6 số!');
-        return;
-    }
-    
-    // Validate passwords
-    if (!newPassword || !confirmPassword) {
-        showToast('⚠️ Vui lòng nhập mật khẩu mới!');
-        return;
-    }
-    
-    if (newPassword !== confirmPassword) {
-        showToast('❌ Mật khẩu không trùng khớp!');
-        return;
-    }
-    
-    if (newPassword.length < 6) {
-        showToast('❌ Mật khẩu phải có ít nhất 6 ký tự!');
-        return;
-    }
-    
-    // Kiểm tra OTP có hợp lệ không
-    const otpRequests = JSON.parse(localStorage.getItem('pm_otpRequests') || '[]');
-    const otpReq = otpRequests.find(r => r.email === email && r.otp === otpInput);
-    
-    if (!otpReq) {
-        showToast('❌ Mã OTP không đúng!');
-        return;
-    }
-    
-    if (Date.now() - otpReq.createdAt > otpReq.expiresIn) {
-        showToast('❌ Mã OTP đã hết hạn! Vui lòng thử lại.');
-        return;
-    }
-    
-    // Update mật khẩu
-    const users = JSON.parse(localStorage.getItem('pm_users') || '[]');
-    const userIndex = users.findIndex(u => u.email === email);
-    
-    if (userIndex !== -1) {
-        users[userIndex].password = newPassword;
-        localStorage.setItem('pm_users', JSON.stringify(users));
-        
-        // Xóa OTP request
-        const updatedRequests = otpRequests.filter(r => r.email !== email);
-        localStorage.setItem('pm_otpRequests', JSON.stringify(updatedRequests));
-        
+    if (result.success) {
+        showToast('✓ Email reset mật khẩu đã được gửi. Kiểm tra hộp thư của bạn!');
         closeModal();
-        showToast('✓ Mật khẩu đã được đặt lại thành công!');
-        renderApp();
     }
 }
 
@@ -843,12 +669,13 @@ function updateUserTypeDisplay() {
     });
 }
 
-function handleLogout() {
-    state.currentUser = null;
-    localStorage.removeItem('pm_currentUser');
-    state.activeCategory = "Tất cả";
-    renderApp();
-    showToast("Đã đăng xuất.");
+async function handleLogout() {
+    const result = await firebaseLogout();
+    if (result.success) {
+        state.currentUser = null;
+        state.activeCategory = "Tất cả";
+        renderApp();
+    }
 }
 
 window.toggleAuthMode = function() {
@@ -2404,7 +2231,7 @@ function renderPromptCard(prompt) {
         ? `<img src="${iconPath}" alt="${prompt.category}" class="w-full h-full object-contain drop-shadow-sm">`
         : `<i data-lucide="sparkles" class="text-yellow-500" size="20"></i>`;
 
-    const isFavorite = state.currentUser?.favorites.includes(prompt.id);
+    const isFavorite = state.currentUser?.favorites?.includes(prompt.id) || false;
     const heartIcon = isFavorite 
         ? `<i data-lucide="heart" fill="#ef4444" class="text-red-500" size="20"></i>` 
         : `<i data-lucide="heart" class="text-slate-400 group-hover:text-red-400 transition-colors" size="20"></i>`;
@@ -3920,6 +3747,18 @@ function renderShareModal(container) {
 window.onload = () => {
     applyTheme();
     setupShortcuts();
+    
+    // Khởi tạo Firebase Authentication State Listener
+    watchAuthState((user) => {
+        if (user) {
+            // Người dùng đã đăng nhập
+            renderApp();
+        } else {
+            // Người dùng chưa đăng nhập
+            renderApp();
+        }
+    });
+    
     renderApp();
     initFirebase(); // Initialize Firebase sync
 };
