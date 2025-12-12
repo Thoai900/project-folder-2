@@ -2447,6 +2447,16 @@ function openModal(type, data = null) {
         modalContent.style.height = 'auto';
         renderLoginModal(modalBody);
     }
+    else if (type === 'phone-auth') {
+        modalContent.classList.replace('max-w-6xl', 'max-w-lg');
+        modalContent.style.height = 'auto';
+        renderPhoneAuthModal(modalBody);
+    }
+    else if (type === 'guest-auth') {
+        modalContent.classList.replace('max-w-6xl', 'max-w-lg');
+        modalContent.style.height = 'auto';
+        renderGuestAuthModal(modalBody);
+    }
     else if (type === 'submitProblem') {
         modalContent.classList.replace('max-w-6xl', 'max-w-2xl');
         renderSubmitProblemModal(modalBody);
@@ -2680,6 +2690,25 @@ function renderLoginModal(container) {
                         Đăng nhập ngay
                     </button>
                 </form>
+
+                <div class="mt-8 space-y-4">
+                    <div class="relative">
+                        <div class="absolute inset-0 flex items-center">
+                            <div class="w-full border-t ${styles.border}"></div>
+                        </div>
+                        <div class="relative flex justify-center text-sm">
+                            <span class="${styles.inputBg} ${styles.textSecondary} px-2">hoặc</span>
+                        </div>
+                    </div>
+
+                    <button type="button" onclick="openModal('phone-auth')" class="w-full px-6 py-3 rounded-xl border ${styles.border} ${styles.textPrimary} hover:bg-indigo-500/10 hover:border-indigo-500 transition-all flex items-center justify-center gap-2 font-medium">
+                        <i data-lucide="phone" size="18"></i> Đăng nhập bằng Số Điện Thoại
+                    </button>
+
+                    <button type="button" onclick="openModal('guest-auth')" class="w-full px-6 py-3 rounded-xl border ${styles.border} ${styles.textPrimary} hover:bg-purple-500/10 hover:border-purple-500 transition-all flex items-center justify-center gap-2 font-medium">
+                        <i data-lucide="user-check" size="18"></i> Tiếp Tục Với Tư Cách Khách
+                    </button>
+                </div>
 
                 <div class="mt-6 text-center">
                     <p class="${styles.textSecondary} text-sm">
@@ -3742,6 +3771,263 @@ function renderShareModal(container) {
             </div>
         </div>
     `;
+}
+
+// ==========================================
+// Phone OTP Authentication Modal
+// ==========================================
+function renderPhoneAuthModal(container) {
+    const styles = getStyles();
+    
+    container.innerHTML = `
+        <div class="p-8 h-full flex flex-col items-center justify-center">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 mx-auto mb-4">
+                    <i data-lucide="phone" class="text-white" size="32"></i>
+                </div>
+                <h2 class="text-3xl font-bold ${styles.textPrimary} mb-2">Đăng Nhập Bằng Số Điện Thoại</h2>
+                <p class="${styles.textSecondary}">Nhận mã OTP qua tin nhắn SMS</p>
+            </div>
+
+            <div id="phone-input-section" class="w-full space-y-4">
+                <!-- reCAPTCHA Container (QUAN TRỌNG) -->
+                <div id="recaptcha-container" class="flex justify-center mb-6"></div>
+
+                <div>
+                    <label class="block text-sm font-medium ${styles.textSecondary} mb-2">Số Điện Thoại</label>
+                    <div class="relative">
+                        <i data-lucide="phone" size="18" class="absolute left-4 top-3.5 ${styles.textSecondary}"></i>
+                        <input 
+                            type="tel" 
+                            id="phone-number-input" 
+                            placeholder="+84 912 345 678"
+                            class="w-full ${styles.inputBg} border ${styles.border} rounded-xl pl-12 pr-4 py-3 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all"
+                        >
+                    </div>
+                    <p class="text-xs ${styles.textSecondary} mt-2">Định dạng: +84912345678 (không có số 0 ở đầu)</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium ${styles.textSecondary} mb-2">Tên Hiển Thị</label>
+                    <div class="relative">
+                        <i data-lucide="user" size="18" class="absolute left-4 top-3.5 ${styles.textSecondary}"></i>
+                        <input 
+                            type="text" 
+                            id="phone-name-input" 
+                            placeholder="VD: Minh Nhật"
+                            class="w-full ${styles.inputBg} border ${styles.border} rounded-xl pl-12 pr-4 py-3 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all"
+                        >
+                    </div>
+                </div>
+
+                <button 
+                    onclick="handlePhoneAuthSendOTP()"
+                    class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-500/30 transition-all flex items-center justify-center gap-2"
+                >
+                    <i data-lucide="send" size="18"></i> Gửi Mã OTP
+                </button>
+            </div>
+
+            <!-- OTP Verification Section (Hidden) -->
+            <div id="otp-verify-section" class="w-full space-y-4 hidden">
+                <div class="p-4 bg-green-500/10 border border-green-500/30 rounded-xl">
+                    <p class="text-sm text-green-400">✓ Mã OTP đã được gửi đến điện thoại của bạn</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium ${styles.textSecondary} mb-2">Nhập Mã OTP (6 chữ số)</label>
+                    <div class="relative">
+                        <i data-lucide="key" size="18" class="absolute left-4 top-3.5 ${styles.textSecondary}"></i>
+                        <input 
+                            type="text" 
+                            id="otp-code-input" 
+                            placeholder="000000"
+                            maxlength="6"
+                            class="w-full ${styles.inputBg} border ${styles.border} rounded-xl pl-12 pr-4 py-3 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all text-center text-2xl letter-spacing-1 font-mono"
+                        >
+                    </div>
+                    <p class="text-xs ${styles.textSecondary} mt-2">Mã OTP có hiệu lực trong 5 phút</p>
+                </div>
+
+                <button 
+                    onclick="handlePhoneAuthVerifyOTP()"
+                    class="w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold shadow-lg transition-all flex items-center justify-center gap-2"
+                >
+                    <i data-lucide="check-circle" size="18"></i> Xác Minh & Đăng Nhập
+                </button>
+
+                <button 
+                    onclick="handlePhoneAuthBack()"
+                    class="w-full py-2 rounded-xl border ${styles.border} ${styles.textPrimary} hover:bg-white/5 font-medium transition-all"
+                >
+                    ← Quay lại
+                </button>
+            </div>
+
+            <div class="mt-6 text-center">
+                <p class="${styles.textSecondary} text-sm">
+                    Đã có tài khoản?
+                    <button onclick="openModal('login')" class="text-indigo-500 font-bold hover:underline ml-1">Đăng nhập</button>
+                </p>
+            </div>
+        </div>
+    `;
+    lucide.createIcons();
+}
+
+// ==========================================
+// Guest Authentication Modal
+// ==========================================
+function renderGuestAuthModal(container) {
+    const styles = getStyles();
+    
+    container.innerHTML = `
+        <div class="p-8 h-full flex flex-col items-center justify-center">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/30 mx-auto mb-4">
+                    <i data-lucide="user-check" class="text-white" size="32"></i>
+                </div>
+                <h2 class="text-3xl font-bold ${styles.textPrimary} mb-2">Đăng Nhập Ẩn Danh</h2>
+                <p class="${styles.textSecondary}">Khám phá ứng dụng mà không cần đăng ký</p>
+            </div>
+
+            <div class="w-full space-y-4">
+                <div class="p-4 bg-orange-500/10 border border-orange-500/30 rounded-xl space-y-3">
+                    <p class="font-bold text-orange-400 flex items-start gap-2">
+                        <i data-lucide="alert-triangle" size="18" class="flex-shrink-0 mt-0.5"></i>
+                        <span>Lưu ý về tài khoản khách:</span>
+                    </p>
+                    <ul class="text-sm text-orange-300/80 space-y-1 ml-6">
+                        <li>• Dữ liệu sẽ không được lưu khi bạn đăng xuất</li>
+                        <li>• Không thể đồng bộ giữa các thiết bị</li>
+                        <li>• Bạn có thể nâng cấp lên tài khoản thực sau</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium ${styles.textSecondary} mb-2">Tên Hiển Thị (Tuỳ Chọn)</label>
+                    <div class="relative">
+                        <i data-lucide="user" size="18" class="absolute left-4 top-3.5 ${styles.textSecondary}"></i>
+                        <input 
+                            type="text" 
+                            id="guest-name-input" 
+                            placeholder="VD: Khách User"
+                            class="w-full ${styles.inputBg} border ${styles.border} rounded-xl pl-12 pr-4 py-3 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all"
+                        >
+                    </div>
+                </div>
+
+                <button 
+                    onclick="handleGuestAuthLogin()"
+                    class="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold shadow-lg transition-all flex items-center justify-center gap-2"
+                >
+                    <i data-lucide="user-check" size="18"></i> Tiếp Tục Với Tư Cách Khách
+                </button>
+
+                <button 
+                    onclick="openModal('login')"
+                    class="w-full py-3 rounded-xl border ${styles.border} ${styles.textPrimary} hover:bg-indigo-500/10 hover:border-indigo-500 font-bold transition-all flex items-center justify-center gap-2"
+                >
+                    <i data-lucide="user" size="18"></i> Đăng Nhập Bằng Tài Khoản Thực
+                </button>
+            </div>
+
+            <div class="mt-6 text-center">
+                <p class="${styles.textSecondary} text-sm">
+                    Chưa có tài khoản?
+                    <button onclick="toggleAuthModeFromGuest()" class="text-indigo-500 font-bold hover:underline ml-1">Đăng ký ngay</button>
+                </p>
+            </div>
+        </div>
+    `;
+    lucide.createIcons();
+}
+
+// ==========================================
+// Handler Functions for Phone Auth
+// ==========================================
+async function handlePhoneAuthSendOTP() {
+    const phoneNumber = document.getElementById('phone-number-input').value;
+    const name = document.getElementById('phone-name-input').value;
+
+    if (!phoneNumber) {
+        showToast('❌ Vui lòng nhập số điện thoại');
+        return;
+    }
+
+    if (!name) {
+        showToast('❌ Vui lòng nhập tên hiển thị');
+        return;
+    }
+
+    showToast('⏳ Đang gửi OTP...');
+
+    const result = await sendPhoneOTP(phoneNumber, 'recaptcha-container');
+
+    if (result.success) {
+        // Lưu thông tin tạm thời
+        localStorage.setItem('pendingPhoneNumber', phoneNumber);
+        localStorage.setItem('pendingPhoneName', name);
+
+        // Hiển thị phần nhập OTP
+        document.getElementById('phone-input-section').classList.add('hidden');
+        document.getElementById('otp-verify-section').classList.remove('hidden');
+        
+        showToast('✓ OTP đã được gửi!');
+    }
+}
+
+async function handlePhoneAuthVerifyOTP() {
+    const otp = document.getElementById('otp-code-input').value;
+    const phoneNumber = localStorage.getItem('pendingPhoneNumber');
+    const name = localStorage.getItem('pendingPhoneName');
+
+    if (!otp || otp.length < 6) {
+        showToast('❌ Vui lòng nhập mã OTP 6 chữ số');
+        return;
+    }
+
+    showToast('⏳ Đang xác minh...');
+
+    const result = await verifyPhoneOTP(otp, phoneNumber, name, 'student');
+
+    if (result.success) {
+        localStorage.removeItem('pendingPhoneNumber');
+        localStorage.removeItem('pendingPhoneName');
+        
+        closeModal();
+        renderApp();
+        showToast('✓ Đăng nhập thành công!');
+    }
+}
+
+function handlePhoneAuthBack() {
+    document.getElementById('phone-input-section').classList.remove('hidden');
+    document.getElementById('otp-verify-section').classList.add('hidden');
+}
+
+// ==========================================
+// Handler Functions for Guest Auth
+// ==========================================
+async function handleGuestAuthLogin() {
+    const guestName = document.getElementById('guest-name-input').value || 'Guest User';
+
+    showToast('⏳ Đang đăng nhập...');
+
+    const result = await firebaseGuestLogin(guestName);
+
+    if (result.success) {
+        closeModal();
+        renderApp();
+        showToast('✓ Đăng nhập ẩn danh thành công!');
+    }
+}
+
+function toggleAuthModeFromGuest() {
+    closeModal();
+    openModal('login');
+    window.isRegisterMode = true;
+    window.toggleAuthMode();
 }
 
 window.onload = () => {
