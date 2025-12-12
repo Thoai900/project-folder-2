@@ -222,6 +222,41 @@ function watchAuthState(callback) {
                 localStorage.setItem('pm_currentUser', JSON.stringify(state.currentUser));
                 
                 callback(state.currentUser);
+            } else {
+                // User exists nhưng không có data - có thể permission denied
+                // Tạo user profile từ auth user
+                console.log('⚠️ Tạo user profile mới');
+                
+                try {
+                    const userRef = window.firebaseRef(window.firebaseDB, `users/${user.uid}`);
+                    const newUserData = {
+                        id: user.uid,
+                        email: user.email,
+                        phone: null,
+                        name: user.displayName || user.email.split('@')[0],
+                        userType: 'student',
+                        isAnonymous: user.isAnonymous || false,
+                        createdAt: new Date().toISOString(),
+                        lastLogin: new Date().toISOString(),
+                        favorites: [],
+                        friends: [],
+                        customPrompts: [],
+                        sharedPrompts: [],
+                        settings: {
+                            theme: 'dark',
+                            language: 'vi'
+                        }
+                    };
+                    
+                    await window.firebaseSet(userRef, newUserData);
+                    
+                    state.currentUser = newUserData;
+                    localStorage.setItem('pm_currentUser', JSON.stringify(state.currentUser));
+                    callback(state.currentUser);
+                } catch (error) {
+                    console.error('❌ Lỗi tạo user profile:', error);
+                    callback(null);
+                }
             }
         } else {
             console.log('❌ Người dùng chưa đăng nhập.');
@@ -547,20 +582,30 @@ async function firebaseGuestLogin(guestName = 'Guest') {
  */
 function initializeRecaptcha(containerId = 'recaptcha-container') {
     try {
-        const recaptchaVerifier = new window.firebaseRecaptchaVerifier(containerId, {
+        // Kiểm tra container tồn tại
+        const container = document.getElementById(containerId);
+        if (!container) {
+            console.error('❌ Container không tồn tại:', containerId);
+            return null;
+        }
+
+        const recaptchaVerifier = new window.firebaseRecaptchaVerifier(window.firebaseAuth, containerId, {
             size: 'normal',
             callback: (response) => {
-                console.log('✅ reCAPTCHA verified');
+                console.log('✅ reCAPTCHA verified:', response);
             },
             'expired-callback': () => {
                 console.log('⚠️ reCAPTCHA expired');
+            },
+            'error-callback': (error) => {
+                console.error('❌ reCAPTCHA error:', error);
             }
-        }, window.firebaseAuth);
+        });
         
         return recaptchaVerifier;
     } catch (error) {
         console.error('❌ Lỗi khởi tạo reCAPTCHA:', error.message);
-        showToast('❌ Lỗi khởi tạo reCAPTCHA.');
+        showToast('❌ Lỗi khởi tạo reCAPTCHA. Hãy tải lại trang.');
         return null;
     }
 }
