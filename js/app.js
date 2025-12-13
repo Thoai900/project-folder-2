@@ -452,6 +452,28 @@ function getColorClass(type) {
     }
 }
 
+// Extract text content from a PDF file (client-side) using pdf.js
+async function extractTextFromPDF(file) {
+    if (!file) return '';
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let fullText = '';
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' ');
+            fullText += `--- Trang ${i} ---\n${pageText}\n`;
+        }
+        return fullText.trim();
+    } catch (error) {
+        console.error('❌ Lỗi đọc PDF:', error);
+        showToast('Không thể trích xuất văn bản từ PDF');
+        return '';
+    }
+}
+
 function toggleTheme() {
     state.theme = state.theme === 'dark' ? 'light' : 'dark';
     localStorage.setItem('pm_theme', state.theme);
