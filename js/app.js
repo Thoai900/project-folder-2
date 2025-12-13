@@ -1209,17 +1209,29 @@ function handleAddSubmit(e) {
         content: formData.get('content'),
         tags: ["New", "User"]
     };
-    
+    // Phân quyền lưu prompt
+    if (state.currentUser.userType === 'teacher') {
+        newPrompt.isTeacherFixed = true;
+        MASTER_PROMPTS.push(newPrompt);
+        state.prompts.unshift(newPrompt);
+        // Sync prompt hệ thống
+        syncPromptToFirebase(newPrompt);
+    } else {
         state.currentUser.customPrompts.push(newPrompt);
-        const userIndex = state.users.findIndex(u => u.id === state.currentUser.id);
-        if (userIndex !== -1) {
-            state.users[userIndex] = state.currentUser;
-            localStorage.setItem('pm_users', JSON.stringify(state.users));
-        }
-        localStorage.setItem('pm_currentUser', JSON.stringify(state.currentUser));
+        state.prompts.unshift(newPrompt);
+    }
 
-    state.prompts.unshift(newPrompt);
+    // Lưu user và state
+    const userIndex = state.users.findIndex(u => u.id === state.currentUser.id);
+    if (userIndex !== -1) {
+        state.users[userIndex] = state.currentUser;
+        localStorage.setItem('pm_users', JSON.stringify(state.users));
+    }
+    localStorage.setItem('pm_currentUser', JSON.stringify(state.currentUser));
     localStorage.setItem('pm_data', JSON.stringify(state.prompts));
+
+    // Sync user profile (chứa customPrompts hoặc metadata)
+    syncUserToFirebase(state.currentUser);
     
     closeModal();
     renderApp();
