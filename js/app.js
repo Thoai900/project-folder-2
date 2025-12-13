@@ -1191,6 +1191,15 @@ async function generateSmartPrompt() {
 
 function handleAddSubmit(e) {
     e.preventDefault();
+    if (!state.currentUser) {
+        showToast('Vui lòng đăng nhập để lưu prompt');
+        return;
+    }
+
+    if (!Array.isArray(state.currentUser.customPrompts)) {
+        state.currentUser.customPrompts = [];
+    }
+
     const formData = new FormData(e.target);
     const newPrompt = {
         id: Date.now(),
@@ -1201,7 +1210,6 @@ function handleAddSubmit(e) {
         tags: ["New", "User"]
     };
     
-    if (state.currentUser) {
         state.currentUser.customPrompts.push(newPrompt);
         const userIndex = state.users.findIndex(u => u.id === state.currentUser.id);
         if (userIndex !== -1) {
@@ -1209,7 +1217,6 @@ function handleAddSubmit(e) {
             localStorage.setItem('pm_users', JSON.stringify(state.users));
         }
         localStorage.setItem('pm_currentUser', JSON.stringify(state.currentUser));
-    }
 
     state.prompts.unshift(newPrompt);
     localStorage.setItem('pm_data', JSON.stringify(state.prompts));
