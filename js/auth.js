@@ -27,9 +27,12 @@ async function firebaseSignUp(email, password, name, userType = 'student') {
         
         await window.firebaseSet(userRef, {
             id: userId,
-            email: email,
-            name: name,
-            userType: userType,
+            email: email || '',
+            name: name || email.split('@')[0],
+            userType: userType || 'student',
+            avatar: null,
+            phone: null,
+            isAnonymous: false,
             createdAt: new Date().toISOString(),
             lastLogin: new Date().toISOString(),
             favorites: [],

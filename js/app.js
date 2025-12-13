@@ -299,12 +299,16 @@ async function syncUserToFirebase(user) {
     
     const userRef = window.firebaseRef(window.firebaseDB, `users/${user.id}`);
     await window.firebaseSet(userRef, {
-        email: user.email,
-        name: user.name,
-        userType: user.userType,
-        avatar: user.avatar,
-        createdAt: user.createdAt,
-        lastLogin: Date.now()
+        email: user.email || null,
+        name: user.name || '',
+        userType: user.userType || 'student',
+        avatar: user.avatar || null,
+        createdAt: user.createdAt || new Date().toISOString(),
+        lastLogin: Date.now(),
+        customPrompts: user.customPrompts || [],
+        friends: user.friends || [],
+        favorites: user.favorites || [],
+        sharedPrompts: user.sharedPrompts || []
     });
 }
 
@@ -313,7 +317,20 @@ async function syncPromptToFirebase(prompt) {
     if (!window.firebaseDB) return;
     
     const promptRef = window.firebaseRef(window.firebaseDB, `prompts/${prompt.id}`);
-    await window.firebaseSet(promptRef, prompt);
+    const safePrompt = {
+        id: prompt.id,
+        title: prompt.title || '',
+        description: prompt.description || '',
+        content: prompt.content || '',
+        category: prompt.category || 'Cá nhân',
+        tags: prompt.tags || [],
+        createdBy: prompt.createdBy || null,
+        createdAt: prompt.createdAt || new Date().toISOString(),
+        isShared: prompt.isShared ?? false,
+        sharedWith: prompt.sharedWith || [],
+        isTeacherFixed: prompt.isTeacherFixed ?? false
+    };
+    await window.firebaseSet(promptRef, safePrompt);
 }
 
 // Delete prompt from Firebase
@@ -587,7 +604,7 @@ function simpleMarkdown(text) {
 
 // --- Prompt Handling (Switch to dedicated chat view) ---
 function switchToChatMode(promptId) {
-    const prompt = state.prompts.find(p => p.id === promptId);
+    const prompt = (state.prompts || []).find(p => p.id === promptId);
     if (!prompt) {
         showToast("Không tìm thấy dữ liệu prompt!");
         return;
@@ -852,7 +869,7 @@ function deletePrompt(promptId) {
 
     // Sync current user cache
     if (state.currentUser) {
-        const refreshed = state.users.find(u => u.id === state.currentUser.id);
+        const refreshed = (state.users || []).find(u => u.id === state.currentUser.id);
         if (refreshed) {
             state.currentUser = refreshed;
             localStorage.setItem('pm_currentUser', JSON.stringify(state.currentUser));
@@ -1110,7 +1127,7 @@ function suggestPromptsFromScan() {
 }
 
 function selectSuggestedPrompt(promptId, scannedText) {
-    const prompt = state.prompts.find(p => p.id === promptId);
+    const prompt = (state.prompts || []).find(p => p.id === promptId);
     if (prompt && scannedText) {
         state.activePrompt = prompt;
         closeModal();
@@ -2069,7 +2086,7 @@ function suggestPromptsForProblem() {
 }
 
 function selectPromptForProblem(promptId) {
-    const prompt = state.prompts.find(p => p.id === promptId);
+    const prompt = (state.prompts || []).find(p => p.id === promptId);
     const problemText = document.getElementById('problem-input').value.trim();
     
     if (prompt && problemText) {
@@ -2302,7 +2319,7 @@ function renderPromptCard(prompt) {
     let iconPath = "";
 
     if (prompt.category === "Giáo dục") {
-        const subjectTag = prompt.tags.find(tag => SUBJECT_ICONS[tag]);
+        const subjectTag = (prompt.tags || []).find(tag => SUBJECT_ICONS[tag]);
         if (subjectTag) iconPath = SUBJECT_ICONS[subjectTag];
     }
     if (!iconPath) iconPath = CATEGORY_ICONS[prompt.category];
@@ -3556,7 +3573,7 @@ function sharePrompt(promptId) {
     const emailInput = prompt("Nhập email bạn muốn chia sẻ:");
     if (!emailInput) return;
     
-    const friendUser = state.users.find(u => u.email === emailInput);
+    const friendUser = (state.users || []).find(u => u.email === emailInput);
     if (!friendUser) {
         showToast("❌ Không tìm thấy người dùng!");
         return;
@@ -3726,7 +3743,7 @@ function removeFriend(index) {
 }
 
 function sharePrompt(promptId) {
-    const prompt = state.data.find(p => p.id === promptId);
+    const prompt = (state.prompts || []).find(p => p.id === promptId);
     if (!prompt) return;
     
     const user = state.currentUser;
@@ -3774,8 +3791,8 @@ function sharePrompt(promptId) {
 
 function sendPromptToFriend(promptId, friendIndex) {
     const user = state.currentUser;
-    const friend = user.friends[friendIndex];
-    const prompt = state.data.find(p => p.id === promptId);
+    const friend = user?.friends?.[friendIndex];
+    const prompt = (state.prompts || []).find(p => p.id === promptId);
     
     if (!friend || !prompt) return;
     
@@ -3836,8 +3853,8 @@ function renderShareModal(container) {
             ` : `
                 <!-- Prompts list -->
                 <div class="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
-                    ${user.customPrompts.map((promptId, idx) => {
-                        const prompt = state.data.find(p => p.id === promptId);
+                    ${(user.customPrompts || []).map((promptId, idx) => {
+                        const prompt = (state.prompts || []).find(p => p.id === promptId);
                         return prompt ? `
                             <button onclick="sharePrompt(${promptId})" class="w-full p-3 rounded-lg ${styles.inputBg} border ${styles.border} hover:border-indigo-500/50 hover:bg-indigo-500/5 text-left transition-all group">
                                 <p class="font-bold ${styles.textPrimary} group-hover:text-indigo-400 truncate">${prompt.title}</p>
