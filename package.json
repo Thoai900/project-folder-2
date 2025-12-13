@@ -1,0 +1,17 @@
+{
+  "name": "project-folder",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "dev": "vercel dev",
+    "lint": "echo \"no lint configured\""
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.5.0",
+    "youtube-transcript": "^1.2.2"
+  }
+}

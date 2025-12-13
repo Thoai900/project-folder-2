@@ -508,7 +508,12 @@ async function handleYoutube() {
             headers,
             body: JSON.stringify({ url })
         });
-        const data = await resp.json();
+        const contentType = resp.headers.get('content-type') || '';
+        const raw = await resp.text();
+        if (!resp.ok) {
+            throw new Error(raw?.slice(0, 200) || `HTTP ${resp.status}`);
+        }
+        const data = contentType.includes('application/json') ? JSON.parse(raw || '{}') : { text: raw };
         if (data.error) throw new Error(data.error);
 
         state.currentLearningContext = data.text || '';
