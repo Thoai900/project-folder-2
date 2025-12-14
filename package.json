@@ -11,6 +11,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "firebase": "^12.6.0",
     "firebase-admin": "^12.5.0",
     "youtube-transcript": "1.0.6"
   }
