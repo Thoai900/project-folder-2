@@ -4,9 +4,11 @@ import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getDatabase, connectDatabaseEmulator } from 'firebase/database';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 
-// Firebase Config - From index.html
+// Firebase Config - API Key từ environment variables
+// ⚠️ QUAN TRỌNG: API key không được hardcode!
+// Cấu hình qua Vercel Environment Variables hoặc .env.local
 const firebaseConfig = {
-    apiKey: "AIzaSyB2Nh4TfIOAuPpO18DdTmTKmJCVgasoWFI",
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "HIDDEN_AT_RUNTIME",
     authDomain: "prompt-573fc.firebaseapp.com",
     databaseURL: "https://prompt-573fc-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "prompt-573fc",

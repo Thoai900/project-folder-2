@@ -23,9 +23,10 @@
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, signInAnonymously, signInWithPhoneNumber, RecaptchaVerifier, sendSignInLinkToEmail, connectAuthEmulator } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         
-        // Firebase Configuration
+        // Firebase Configuration - API Key từ environment variables (KHÔNG public key)
+        // ⚠️ QUAN TRỌNG: API key phải được cấu hình qua Vercel Environment Variables hoặc .env.local
         const firebaseConfig = {
-            apiKey: "AIzaSyB2Nh4TfIOAuPpO18DdTmTKmJCVgasoWFI",
+            apiKey: "HIDDEN_AT_RUNTIME", // Sẽ được inject từ Vercel
             authDomain: "prompt-573fc.firebaseapp.com",
             databaseURL: "https://prompt-573fc-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "prompt-573fc",
