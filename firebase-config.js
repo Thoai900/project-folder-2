@@ -6,7 +6,7 @@ import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 
 // Firebase Config - From index.html
 const firebaseConfig = {
-    apiKey: "AIzaSyA5JfpN7Sk3tdCBDa7u5coDbjrwx7D2GV8",
+    apiKey: "AIzaSyB2Nh4TfIOAuPpO18DdTmTKmJCVgasoWFI",
     authDomain: "prompt-573fc.firebaseapp.com",
     databaseURL: "https://prompt-573fc-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "prompt-573fc",
