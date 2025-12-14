@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ==========================================
+    // Default: Deny all access
+    // ==========================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ==========================================
+    // 1. MESSAGES - Chat messages collection
+    // ==========================================
+    match /messages/{messageId} {
+      // Cho phép authenticated users đọc tất cả messages
+      allow read: if request.auth != null;
+      
+      // Cho phép user tạo message của chính họ
+      allow create: if request.auth != null && 
+                       request.resource.data.userId == request.auth.uid &&
+                       request.resource.data.createdAt == request.time;
+      
+      // Không cho phép edit/delete
+      allow update, delete: if false;
+    }
+
+    // ==========================================
+    // 2. USERS - User profiles
+    // ==========================================
+    match /users/{userId} {
+      // User chỉ có thể đọc profile của chính mình
+      allow read: if request.auth.uid == userId;
+      
+      // User chỉ có thể update profile của chính mình
+      allow write: if request.auth.uid == userId;
+    }
+
+    // ==========================================
+    // 3. PUBLIC PROFILES - Public user info
+    // ==========================================
+    match /publicProfiles/{userId} {
+      // Tất cả authenticated users có thể đọc public profiles
+      allow read: if request.auth != null;
+      
+      // User chỉ có thể update profile của chính mình
+      allow write: if request.auth.uid == userId;
+    }
+
+    // ==========================================
+    // 4. SHARED PROMPTS - Chia sẻ prompt
+    // ==========================================
+    match /sharedPrompts/{documentId} {
+      // Authenticated users có thể đọc shared prompts
+      allow read: if request.auth != null;
+      
+      // User tạo prompt có thể share
+      allow create: if request.auth != null && 
+                       request.resource.data.createdBy == request.auth.uid;
+      
+      // Chỉ creator có thể update/delete
+      allow update, delete: if request.auth.uid == resource.data.createdBy;
+    }
+
+    // ==========================================
+    // 5. NOTIFICATIONS - Thông báo
+    // ==========================================
+    match /notifications/{userId}/{notificationId} {
+      // User chỉ có thể đọc notification của chính mình
+      allow read: if request.auth.uid == userId;
+      
+      // Server/Admin tạo notification (không cho client tạo)
+      allow create: if false;
+      
+      // User có thể đánh dấu đã đọc
+      allow update: if request.auth.uid == userId;
+      
+      // User có thể xóa notification của mình
+      allow delete: if request.auth.uid == userId;
+    }
+
+  }
+}

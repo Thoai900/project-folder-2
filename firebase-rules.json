@@ -1,20 +1,72 @@
 {
   "rules": {
+    // ==========================================
+    // 1. USERS - Private data (chỉ user mình được đọc/viết)
+    // ==========================================
     "users": {
       "$userId": {
         ".read": "$userId === auth.uid",
         ".write": "$userId === auth.uid"
       }
     },
+
+    // ==========================================
+    // 2. PUBLIC USERS - Public profiles (ai đăng nhập được đọc)
+    // ==========================================
     "publicUsers": {
       ".read": "auth != null",
       "$userId": {
         ".write": "$userId === auth.uid"
       }
     },
+
+    // ==========================================
+    // 3. PROMPTS - Shared prompts (authenticated users)
+    // ==========================================
     "prompts": {
       ".read": "auth != null",
-      ".write": "auth != null && root.child('users').child(auth.uid).exists()"
-    }
+      ".write": "auth != null",
+      "$promptId": {
+        ".read": "auth != null",
+        ".write": "root.child('prompts').child($promptId).child('createdBy').val() === auth.uid || auth != null"
+      }
+    },
+
+    // ==========================================
+    // 4. MESSAGES - Chat messages (authenticated users)
+    // ==========================================
+    "messages": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      ".indexOn": ["createdAt", "userId"]
+    },
+
+    // ==========================================
+    // 5. SHARED PROMPTS - Chia sẻ prompt giữa users
+    // ==========================================
+    "sharedPrompts": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$sharedId": {
+        ".read": "auth != null",
+        ".write": "root.child('sharedPrompts').child($sharedId).child('createdBy').val() === auth.uid"
+      }
+    },
+
+    // ==========================================
+    // 6. FAVORITES - Yêu thích của user
+    // ==========================================
+    "favorites": {
+      "$userId": {
+        ".read": "$userId === auth.uid",
+        ".write": "$userId === auth.uid"
+      }
+    },
+
+    // ==========================================
+    // DEFAULT - Deny all other access
+    // ==========================================
+    ".read": false,
+    ".write": false
   }
 }
