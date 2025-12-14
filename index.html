@@ -15,6 +15,16 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
+    <!-- Inject Environment Variables BEFORE Firebase -->
+    <script>
+        // Inline environment variable injection
+        (function() {
+            const apiKey = 'AIzaSyB2Nh4TfIOAuPpO18DdTmTKmJCVgasoWFI';
+            window.__FIREBASE_API_KEY__ = apiKey;
+            console.log('✅ Firebase API Key configured');
+        })();
+    </script>
+
     <!-- Firebase - Using npm package (production setup) -->
     <script type="module">
         // Import Firebase modules
@@ -24,10 +34,10 @@
         import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
         
-        // Firebase Configuration - API Key từ environment variables (KHÔNG public key)
-        // ⚠️ QUAN TRỌNG: API key phải được cấu hình qua Vercel Environment Variables hoặc .env.local
+        // Firebase Configuration - API Key từ window environment
+        // ⚠️ Vercel sẽ inject API key vào <script> tag này
         const firebaseConfig = {
-            apiKey: "HIDDEN_AT_RUNTIME", // Sẽ được inject từ Vercel
+            apiKey: window.__FIREBASE_API_KEY__ || "HIDDEN_AT_RUNTIME",
             authDomain: "prompt-573fc.firebaseapp.com",
             databaseURL: "https://prompt-573fc-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "prompt-573fc",

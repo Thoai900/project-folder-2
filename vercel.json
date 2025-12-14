@@ -1,0 +1,22 @@
+{
+  "buildCommand": "echo 'Static site - no build needed'",
+  "devCommand": "vercel dev",
+  "outputDirectory": "./",
+  "installCommand": "npm install",
+  "env": {
+    "NEXT_PUBLIC_FIREBASE_API_KEY": {
+      "value": "@firebase-api-key"
+    }
+  },
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/:path*",
+      "destination": "/$1"
+    }
+  ]
+}
