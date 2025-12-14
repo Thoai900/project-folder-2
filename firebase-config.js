@@ -3,6 +3,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getDatabase, connectDatabaseEmulator } from 'firebase/database';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
 // Firebase Config - API Key từ environment variables
 // ⚠️ QUAN TRỌNG: API key không được hardcode!
@@ -25,6 +26,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const database = getDatabase(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 // Optional: Connect to emulators in development
 // Uncomment these lines if you're running Firebase Local Emulator Suite
@@ -36,4 +38,4 @@ const db = getFirestore(app);
 // }
 
 // Export instances
-export { app, auth, database, db };
+export { app, auth, database, db, storage };

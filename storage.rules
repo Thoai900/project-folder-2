@@ -1,0 +1,87 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // ==========================================
+    // Default: Deny all access
+    // ==========================================
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // ==========================================
+    // 1. PUBLIC IMAGES - Ảnh công khai (ai đăng nhập được đọc)
+    // ==========================================
+    match /images/public/{imageId} {
+      // Authenticated users có thể đọc
+      allow read: if request.auth != null;
+      
+      // User có thể upload ảnh của mình
+      allow write: if request.auth != null && 
+                      request.resource.size < 10 * 1024 * 1024 &&  // Max 10MB
+                      request.resource.contentType.matches('image/.*');
+    }
+
+    // ==========================================
+    // 2. USER AVATARS - Ảnh đại diện
+    // ==========================================
+    match /avatars/{userId}/{fileName} {
+      // Authenticated users có thể đọc
+      allow read: if request.auth != null;
+      
+      // User chỉ upload ảnh đại diện của chính mình
+      allow write: if request.auth.uid == userId && 
+                      request.resource.size < 5 * 1024 * 1024 &&  // Max 5MB
+                      request.resource.contentType.matches('image/.*');
+      
+      // User chỉ xóa ảnh của chính mình
+      allow delete: if request.auth.uid == userId;
+    }
+
+    // ==========================================
+    // 3. USER DOCUMENTS - Tài liệu của user (private)
+    // ==========================================
+    match /documents/{userId}/{fileName} {
+      // User chỉ có thể đọc document của chính mình
+      allow read: if request.auth.uid == userId;
+      
+      // User chỉ upload file của chính mình
+      allow write: if request.auth.uid == userId && 
+                      request.resource.size < 50 * 1024 * 1024;  // Max 50MB
+      
+      // User chỉ xóa file của chính mình
+      allow delete: if request.auth.uid == userId;
+    }
+
+    // ==========================================
+    // 4. SHARED FILES - File chia sẻ
+    // ==========================================
+    match /shared/{sharedId}/{fileName} {
+      // Authenticated users có thể đọc shared files
+      allow read: if request.auth != null;
+      
+      // User tạo shared file
+      allow create: if request.auth != null && 
+                       request.resource.size < 50 * 1024 * 1024;
+      
+      // Chỉ creator có thể update/delete
+      allow update, delete: if false;  // Không cho phép edit shared files
+    }
+
+    // ==========================================
+    // 5. SCANNED FILES - File từ camera/scanner (user)
+    // ==========================================
+    match /scans/{userId}/{scanId}/{fileName} {
+      // User chỉ có thể đọc scan của chính mình
+      allow read: if request.auth.uid == userId;
+      
+      // User upload scan
+      allow write: if request.auth.uid == userId && 
+                      request.resource.size < 20 * 1024 * 1024;  // Max 20MB
+      
+      // User có thể xóa scan
+      allow delete: if request.auth.uid == userId;
+    }
+
+  }
+}
