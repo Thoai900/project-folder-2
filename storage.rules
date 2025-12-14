@@ -3,51 +3,161 @@ service firebase.storage {
   match /b/{bucket}/o {
     
     // ==========================================
-    // Default: Deny all access
+    // HELPER FUNCTIONS
+    // ==========================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isUserOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isValidImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    function isValidFile() {
+      return request.resource.contentType in [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'application/pdf',
+        'text/plain',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ];
+    }
+
+    // ==========================================
+    // DEFAULT: Deny all access
     // ==========================================
     match /{allPaths=**} {
       allow read, write: if false;
     }
 
     // ==========================================
-    // 1. PUBLIC IMAGES - Ảnh công khai (ai đăng nhập được đọc)
+    // 1. PUBLIC IMAGES - Ảnh công khai
     // ==========================================
-    match /images/public/{imageId} {
+    match /public/images/{imageId} {
       // Authenticated users có thể đọc
-      allow read: if request.auth != null;
+      allow read: if isAuthenticated();
       
-      // User có thể upload ảnh của mình
-      allow write: if request.auth != null && 
-                      request.resource.size < 10 * 1024 * 1024 &&  // Max 10MB
-                      request.resource.contentType.matches('image/.*');
+      // User có thể upload ảnh
+      allow create: if isAuthenticated() && 
+                       isValidImage() &&
+                       request.resource.size < 10 * 1024 * 1024; // Max 10MB
+      
+      // User không thể update/delete
+      allow update, delete: if false;
     }
 
     // ==========================================
-    // 2. USER AVATARS - Ảnh đại diện
+    // 2. USER AVATARS - Ảnh đại diện người dùng
     // ==========================================
     match /avatars/{userId}/{fileName} {
       // Authenticated users có thể đọc
-      allow read: if request.auth != null;
+      allow read: if isAuthenticated();
       
-      // User chỉ upload ảnh đại diện của chính mình
-      allow write: if request.auth.uid == userId && 
-                      request.resource.size < 5 * 1024 * 1024 &&  // Max 5MB
-                      request.resource.contentType.matches('image/.*');
+      // User chỉ upload ảnh của chính mình
+      allow create: if isAuthenticated() && 
+                       isUserOwner(userId) &&
+                       isValidImage() &&
+                       request.resource.size < 5 * 1024 * 1024; // Max 5MB
+      
+      // User chỉ update ảnh của chính mình
+      allow update: if isAuthenticated() && 
+                       isUserOwner(userId) &&
+                       isValidImage();
       
       // User chỉ xóa ảnh của chính mình
-      allow delete: if request.auth.uid == userId;
+      allow delete: if isAuthenticated() && 
+                       isUserOwner(userId);
     }
 
     // ==========================================
-    // 3. USER DOCUMENTS - Tài liệu của user (private)
+    // 3. USER DOCUMENTS - Tài liệu private
     // ==========================================
     match /documents/{userId}/{fileName} {
       // User chỉ có thể đọc document của chính mình
-      allow read: if request.auth.uid == userId;
+      allow read: if isAuthenticated() && 
+                     isUserOwner(userId);
       
       // User chỉ upload file của chính mình
-      allow write: if request.auth.uid == userId && 
-                      request.resource.size < 50 * 1024 * 1024;  // Max 50MB
+      allow create: if isAuthenticated() && 
+                       isUserOwner(userId) &&
+                       isValidFile() &&
+                       request.resource.size < 50 * 1024 * 1024; // Max 50MB
+      
+      // User chỉ update file của chính mình
+      allow update: if isAuthenticated() && 
+                       isUserOwner(userId);
+      
+      // User chỉ xóa file của chính mình
+      allow delete: if isAuthenticated() && 
+                       isUserOwner(userId);
+    }
+
+    // ==========================================
+    // 4. SHARED FILES - Tài liệu chia sẻ
+    // ==========================================
+    match /shared/{sharedId}/{userId}/{fileName} {
+      // Authenticated users có thể đọc
+      allow read: if isAuthenticated();
+      
+      // User có thể upload file chia sẻ
+      allow create: if isAuthenticated() && 
+                       isUserOwner(userId) &&
+                       isValidFile() &&
+                       request.resource.size < 100 * 1024 * 1024; // Max 100MB
+      
+      // User chỉ update file của chính mình
+      allow update: if isAuthenticated() && 
+                       isUserOwner(userId);
+      
+      // User chỉ xóa file của chính mình
+      allow delete: if isAuthenticated() && 
+                       isUserOwner(userId);
+    }
+
+    // ==========================================
+    // 5. PROMPT RESOURCES - Resources liên kết prompts
+    // ==========================================
+    match /prompts/{promptId}/{userId}/{fileName} {
+      // Authenticated users có thể đọc
+      allow read: if isAuthenticated();
+      
+      // User có thể upload resources cho prompt
+      allow create: if isAuthenticated() && 
+                       isUserOwner(userId) &&
+                       request.resource.size < 50 * 1024 * 1024;
+      
+      // User chỉ update resources của chính mình
+      allow update: if isAuthenticated() && 
+                       isUserOwner(userId);
+      
+      // User chỉ xóa resources của chính mình
+      allow delete: if isAuthenticated() && 
+                       isUserOwner(userId);
+    }
+
+    // ==========================================
+    // 6. TEMPORARY UPLOADS - Upload tạm thời
+    // ==========================================
+    match /temp/{tempId}/{fileName} {
+      // User có thể tạo upload tạm thời
+      allow create: if isAuthenticated() &&
+                       request.resource.size < 100 * 1024 * 1024; // Max 100MB
+      
+      // User có thể xóa upload tạm
+      allow delete: if isAuthenticated();
+      
+      // Không cho phép đọc/update
+      allow read, update: if false;
+    }
+  }
+}
+
       
       // User chỉ xóa file của chính mình
       allow delete: if request.auth.uid == userId;

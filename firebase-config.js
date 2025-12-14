@@ -2,7 +2,13 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getDatabase, connectDatabaseEmulator } from 'firebase/database';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { 
+    getFirestore, 
+    connectFirestoreEmulator, 
+    doc, 
+    updateDoc, 
+    deleteDoc 
+} from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
 // Firebase Config - API Key từ environment variables
